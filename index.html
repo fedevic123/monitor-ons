@@ -157,7 +157,7 @@ input[type=text]::placeholder { color:var(--muted); }
 /* ── TABLE ── */
 .tbl-wrap { overflow-x:auto; border-radius:10px; border:1px solid var(--border); }
 table { width:100%; border-collapse:collapse; font-size:12px; }
-thead th { font-family:'Roboto Mono','DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; background:var(--surface); }
+thead th { font-family:'Roboto Mono','DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap; cursor:pointer; user-select:none; background:var(--surface); position:sticky; top:54px; z-index:10; }
 thead th:hover { color:var(--text2); }
 thead th.sa { color:var(--accent2); }
 tbody tr { border-bottom:1px solid var(--border); cursor:pointer; transition:background .12s; }
@@ -223,6 +223,9 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 .state { text-align:center; padding:80px 20px; color:var(--muted); }
 .state-spinner { width:28px; height:28px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 16px; }
 .empty-icon { font-size:36px; margin-bottom:12px; }
+
+.fav-btn { position:absolute; top:10px; right:10px; background:none; border:none; cursor:pointer; font-size:15px; padding:0; line-height:1; z-index:2; transition:transform .15s; }
+.fav-btn:hover { transform:scale(1.2); }
 
 /* SCROLLBAR */
 ::-webkit-scrollbar { width:4px; height:4px; }
@@ -614,6 +617,8 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <button class="tab active" onclick="setView('cards')">Tarjetas</button>
     <button class="tab" onclick="setView('table')">Tabla</button>
     <button class="tab" onclick="setView('curva')">Curva TIR</button>
+    <button class="tab" onclick="setView('novedades')">⭐ Favoritas</button>
+    <button class="tab" onclick="setView('nuevas')">🆕 Novedades</button>
   </div>
 </div>
 
@@ -637,14 +642,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
   </div>
 </div>
 
-<div class="stats-bar">
-  <div class="stats-inner">
-    <div class="stat">
-      <div class="stat-label">Total ONs</div>
-      <div class="stat-value" id="stTotal">—</div>
-    </div>
-  </div>
-</div>
+
 
 <!-- CONTROLS -->
 <div class="controls" id="controls">
@@ -728,6 +726,16 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
       <tbody id="tableBody"></tbody>
     </table>
   </div>
+</div>
+
+<!-- FAVORITAS VIEW -->
+<div class="main" id="viewFavoritas" style="display:none">
+  <div id="favoritasContent"></div>
+</div>
+
+<!-- NUEVAS VIEW -->
+<div class="main" id="viewNuevas" style="display:none">
+  <div id="nuevasContent"></div>
 </div>
 
 <!-- CURVA VIEW -->
@@ -868,9 +876,7 @@ const parseDate = v => { if(!v)return null; const parts=v.split('/'); if(parts.l
 
 // ─── STATS ────────────────────────────────────────────────
 function updateStats() {
-  document.getElementById('stTotal').textContent = allData.length;
   document.getElementById('total').textContent = allData.length;
-  document.getElementById('count').textContent = filtered.length || allData.length;
 }
 
 // ─── FILTERS ──────────────────────────────────────────────
@@ -964,6 +970,7 @@ function applyFilters(){
     if(va<vb)return sortAsc?-1:1; if(va>vb)return sortAsc?1:-1; return 0;
   });
   document.getElementById('count').textContent=filtered.length;
+  document.getElementById('total').textContent=allData.length;
   if(currentView==='cards')renderCards();
   else if(currentView==='table')renderTable();
   else renderCurva();
@@ -1038,34 +1045,39 @@ function renderCards(){
 function cardHTML(d){
   const cc=tirColor(d.tir);
   const leyC=d.ley==='NY'?'tg-ny':'tg-arg';
-  return `<div class="card" style="--cc:${cc}" onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>
-    <div class="card-top"><div class="card-name">${d.nombre}</div><div class="card-tir">${d.tirStr||'—'}</div></div>
-    <div class="card-tickers"><div class="tk">${d.tickerUSD}</div>${d.tickerARS?`<div class="tk ars">${d.tickerARS}</div>`:''}</div>
-    <div class="card-metrics">
-      <div class="m"><div class="m-l">Precio</div><div class="m-v">${d.precio?'U$D '+d.precio.toFixed(2):'—'}</div></div>
-      <div class="m"><div class="m-l">Paridad</div><div class="m-v" style="${d.paridad&&d.paridad<80?'color:var(--red)':''}">${d.paridad?.toFixed(1)??'—'}</div></div>
-      <div class="m"><div class="m-l">Duration</div><div class="m-v">${d.duration?.toFixed(2)??'—'}</div></div>
-      <div class="m"><div class="m-l">Cupón</div><div class="m-v">${d.cupon||'—'}</div></div>
-    </div>
-    <div class="card-foot">
-      <div class="tags"><span class="tg ${leyC}">${d.ley==='NY'?'Ley NY':'Ley ARG'}</span><span class="tg tg-p">${d.pagos||'—'}</span>${parseInt(d.minimo)>1?`<span class="tg tg-p">Mín ${Number(d.minimo).toLocaleString()}</span>`:''}</div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
-        <div style="font-size:9px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase">Vencimiento</div>
-        <div class="venc">${d.vencimiento||'—'}</div>
-      </div>
-    </div>
-  </div>`;
+  const isFav=favorites.has(d.tickerUSD);
+  const borderStyle=isFav?'border-color:rgba(212,168,83,0.5);':'';
+  return '<div class="card" style="--cc:'+cc+';'+borderStyle+'" onclick='openModal('+JSON.stringify(d).replace(/'/g,"&#39;")+')'>'+
+    '<button class="fav-btn" onclick="event.stopPropagation();toggleFav(''+d.tickerUSD+'')" style="opacity:'+(isFav?1:0.2)+'">'+( isFav?'⭐':'☆')+'</button>'+
+    '<div class="card-top"><div class="card-name">'+d.nombre+'</div><div class="card-tir" style="color:'+cc+'">'+( d.tirStr||'—')+'</div></div>'+
+    '<div class="card-tickers"><div class="tk">'+d.tickerUSD+'</div>'+(d.tickerARS?'<div class="tk ars">'+d.tickerARS+'</div>':'')+'</div>'+
+    '<div class="card-metrics">'+
+      '<div class="m"><div class="m-l">Precio</div><div class="m-v">'+(d.precio?'U$D '+d.precio.toFixed(2):'—')+'</div></div>'+
+      '<div class="m"><div class="m-l">Paridad</div><div class="m-v" style="'+(d.paridad&&d.paridad<80?'color:var(--red)':'')+'">'+( d.paridad!=null?d.paridad.toFixed(1):'—')+'</div></div>'+
+      '<div class="m"><div class="m-l">Duration</div><div class="m-v">'+(d.duration!=null?d.duration.toFixed(2):'—')+'</div></div>'+
+      '<div class="m"><div class="m-l">Cupón</div><div class="m-v">'+(d.cupon||'—')+'</div></div>'+
+    '</div>'+
+    '<div class="card-foot">'+
+      '<div class="tags"><span class="tg '+leyC+'">'+(d.ley==='NY'?'Ley NY':'Ley ARG')+'</span><span class="tg tg-p">'+(d.pagos||'—')+'</span>'+(parseInt(d.minimo)>1?'<span class="tg tg-p">Mín '+Number(d.minimo).toLocaleString()+'</span>':'')+'</div>'+
+      '<div class="venc">'+(d.vencimiento||'—')+'</div>'+
+    '</div>'+
+  '</div>';
 }
 
 // ─── TABLE ────────────────────────────────────────────────
-function renderTable(){
+function renderTable(data){
   const tb=document.getElementById('tableBody');
-  if(!filtered.length){tb.innerHTML='<tr><td colspan="12" style="text-align:center;padding:40px;color:var(--muted)">Sin resultados</td></tr>';return;}
-  tb.innerHTML=filtered.map(d=>{
+  const rows = data || filtered;
+  if(!rows.length){tb.innerHTML='<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--muted)">Sin resultados</td></tr>';return;}
+  tb.innerHTML=rows.map(d=>{
     const cc=tirColor(d.tir);
     const leyC=d.ley==='NY'?'tg-ny':'tg-arg';
+    const isFav=favorites.has(d.tickerUSD);
+    const starBtn=`<button onclick="event.stopPropagation();toggleFav('${d.tickerUSD}')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0;line-height:1;opacity:${isFav?1:0.25}" title="${isFav?'Quitar favorita':'Marcar favorita'}">${isFav?'⭐':'☆'}</button>`;
     return `<tr onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>
+      <td style="text-align:center;padding:8px 6px">${starBtn}</td>
       <td class="nm">${d.nombre}</td>
+      <td style="color:var(--accent2);font-family:'Roboto Mono',monospace">${d.tickerUSD}</td>
       <td style="color:${cc};font-weight:500">${d.tirStr||'—'}</td>
       <td>${d.precio?'U$D '+d.precio.toFixed(2):'—'}</td>
       <td>${d.paridad?.toFixed(1)??'—'}</td>
@@ -1074,7 +1086,6 @@ function renderTable(){
       <td><span class="tg ${leyC}" style="font-size:9px">${d.ley||'—'}</span></td>
       <td>${d.pagos||'—'}</td>
       <td>${d.cupon||'—'}</td>
-      <td style="color:var(--accent2)">${d.tickerUSD}</td>
       <td style="color:var(--gold)">${d.tickerARS||'—'}</td>
       <td>${d.minimo?Number(d.minimo).toLocaleString():'—'}</td>
     </tr>`;
@@ -1311,14 +1322,19 @@ function setView(v){
   document.getElementById('viewCards').style.display=v==='cards'?'block':'none';
   document.getElementById('viewTable').style.display=v==='table'?'block':'none';
   document.getElementById('viewCurva').style.display=v==='curva'?'block':'none';
-  document.getElementById('controls').style.display=v==='curva'?'none':'block';
+  document.getElementById('viewFavoritas').style.display=v==='favoritas'?'block':'none';
+  document.getElementById('viewNuevas').style.display=v==='nuevas'?'block':'none';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas';
+  document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('active',['cards','table','curva'][i]===v);
+    t.classList.toggle('active',['cards','table','curva','favoritas','nuevas'][i]===v);
   });
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
-    document.getElementById(id).classList.toggle('on',['cards','table','curva'][i]===v);
+    document.getElementById(id)?.classList.toggle('on',['cards','table','curva'][i]===v);
   });
-  if(v==='curva'){setTimeout(renderCurva,50);}
+  if(v==='curva') setTimeout(renderCurva,50);
+  else if(v==='favoritas') renderFavoritas();
+  else if(v==='nuevas') renderNuevas();
   else applyFilters();
 }
 
@@ -1542,6 +1558,64 @@ function parseFlujoDate(v){
 function isDatePast(dateStr){
   const d=parseFlujoDate(dateStr);
   return d?d<new Date():false;
+}
+
+// ─── FAVORITES ───────────────────────────────────────────
+let favorites = new Set(JSON.parse(localStorage.getItem('ia_favs')||'[]'));
+
+function toggleFav(ticker) {
+  if (favorites.has(ticker)) {
+    favorites.delete(ticker);
+  } else {
+    favorites.add(ticker);
+  }
+  localStorage.setItem('ia_favs', JSON.stringify([...favorites]));
+  // Re-render current view
+  if (currentView === 'cards') renderCards();
+  else if (currentView === 'table') renderTable();
+  else if (currentView === 'favoritas') renderFavoritas();
+}
+
+function renderFavoritas() {
+  const el = document.getElementById('favoritasContent');
+  const favData = allData.filter(d => favorites.has(d.tickerUSD));
+  if (!favData.length) {
+    el.innerHTML = '<div class="state"><div class="empty-icon">⭐</div>Todavía no marcaste ninguna ON como favorita.<br><small style="color:var(--muted);font-size:12px">Tocá la ⭐ en cualquier card o fila de la tabla.</small></div>';
+    return;
+  }
+  // Sort by TIR
+  favData.sort((a,b) => (b.tir||0) - (a.tir||0));
+  el.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--muted)">'+favData.length+' ONs marcadas como favoritas</div>'+
+    '<div class="grid">'+favData.map(cardHTML).join('')+'</div>';
+}
+
+// ─── NOVEDADES ────────────────────────────────────────────
+function renderNuevas() {
+  const el = document.getElementById('nuevasContent');
+  // ONs seen before stored in localStorage
+  const seenKey = 'ia_seen_tickers';
+  const seenRaw = localStorage.getItem(seenKey);
+  const firstVisit = !seenRaw;
+  const seen = new Set(seenRaw ? JSON.parse(seenRaw) : []);
+
+  // Find tickers NOT in seen set (new since last visit)
+  const nuevas = allData.filter(d => !seen.has(d.tickerUSD));
+
+  // Update seen set with all current tickers
+  const allTickers = allData.map(d => d.tickerUSD);
+  localStorage.setItem(seenKey, JSON.stringify(allTickers));
+
+  if (firstVisit) {
+    el.innerHTML = '<div class="state"><div class="empty-icon">🆕</div>Primera visita registrada.<br><small style="color:var(--muted);font-size:12px">La próxima vez que se agreguen ONs al monitor, aparecerán aquí.</small></div>';
+    return;
+  }
+  if (!nuevas.length) {
+    el.innerHTML = '<div class="state"><div class="empty-icon">✅</div>No hay ONs nuevas desde tu última visita.</div>';
+    return;
+  }
+  nuevas.sort((a,b) => (b.tir||0) - (a.tir||0));
+  el.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--ia-green)">'+nuevas.length+' ON'+(nuevas.length>1?'s':'')+' nueva'+(nuevas.length>1?'s':'')+' desde tu última visita</div>'+
+    '<div class="grid">'+nuevas.map(cardHTML).join('')+'</div>';
 }
 
 // ─── INIT ─────────────────────────────────────────────────
