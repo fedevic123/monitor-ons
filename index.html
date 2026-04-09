@@ -824,6 +824,7 @@ async function loadMonitor() {
     allData = parseMonitor(txt);
     document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
     updateStats();
+    filtered = allData; // reset filtered to full list before applying
     applyFilters();
   } catch(e) {
     document.getElementById('viewCards').innerHTML = '<div class="state"><div class="empty-icon">⚠️</div>No se pudo cargar el monitor.<br><small style="font-size:11px;color:var(--muted)">'+e.message+'</small></div>';
@@ -869,6 +870,7 @@ const parseDate = v => { if(!v)return null; const parts=v.split('/'); if(parts.l
 function updateStats() {
   document.getElementById('stTotal').textContent = allData.length;
   document.getElementById('total').textContent = allData.length;
+  document.getElementById('count').textContent = filtered.length || allData.length;
 }
 
 // ─── FILTERS ──────────────────────────────────────────────
