@@ -465,6 +465,41 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
   .modal-grid { grid-template-columns: 1fr; }
 }
 
+/* ── CARTERA ── */
+.cartera-wrap { max-width:1280px; margin:0 auto; padding:12px 24px 60px; }
+.cartera-top { display:flex; gap:16px; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; }
+.cartera-panel { flex:1; min-width:280px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; }
+.cartera-panel-title { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+.cartera-list { display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; }
+.cartera-item { display:flex; align-items:center; gap:10px; padding:8px 10px; background:var(--surface2); border:1px solid var(--border); border-radius:7px; cursor:pointer; transition:all .15s; }
+.cartera-item:hover { border-color:var(--border2); }
+.cartera-item.selected { border-color:var(--ia-green); background:rgba(33,226,171,.06); }
+.cartera-item .ci-ticker { font-family:"Roboto Mono",monospace; font-size:11px; color:var(--accent2); width:56px; flex-shrink:0; }
+.cartera-item .ci-name { font-size:11px; color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cartera-item .ci-tir { font-family:"Roboto Mono",monospace; font-size:11px; font-weight:600; flex-shrink:0; }
+.cartera-item .ci-check { font-size:14px; flex-shrink:0; }
+.calendar-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px; }
+.calendar-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:4px; }
+.calendar-sub { font-size:11px; color:var(--muted); margin-bottom:16px; }
+.cal-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+@media(max-width:640px) { .cal-grid { grid-template-columns:repeat(3,1fr); } }
+.cal-month { border-radius:8px; border:1px solid var(--border); overflow:hidden; }
+.cal-month-header { padding:8px 10px; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; background:var(--surface2); }
+.cal-month.has-payments .cal-month-header { background:rgba(33,226,171,.12); color:var(--ia-green); border-bottom:1px solid rgba(33,226,171,.2); }
+.cal-month.no-payments .cal-month-header { background:rgba(239,68,68,.08); color:var(--red); border-bottom:1px solid rgba(239,68,68,.15); }
+.cal-month.vencimiento .cal-month-header { background:rgba(212,168,83,.12); color:var(--gold2); border-bottom:1px solid rgba(212,168,83,.2); }
+.cal-month-body { padding:8px; min-height:50px; }
+.cal-chip { font-family:"Roboto Mono",monospace; font-size:9px; padding:2px 5px; border-radius:3px; margin-bottom:3px; display:flex; align-items:center; gap:4px; }
+.cal-chip.cupon { background:rgba(33,226,171,.1); color:var(--ia-green); border:1px solid rgba(33,226,171,.2); }
+.cal-chip.vence { background:rgba(212,168,83,.12); color:var(--gold2); border:1px solid rgba(212,168,83,.2); font-weight:600; }
+.cartera-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+@media(max-width:640px) { .cartera-summary { grid-template-columns:repeat(2,1fr); } }
+.cs-box { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px 14px; }
+.cs-label { font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:4px; }
+.cs-value { font-family:"Roboto Mono",monospace; font-size:18px; color:var(--text); font-weight:500; }
+.cs-value.green { color:var(--ia-green); }
+.cs-value.red { color:var(--red); }
+
 /* ── PRINT / PDF ── */
 @media print {
   * {
@@ -619,6 +654,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <button class="tab" onclick="setView('curva')">Curva TIR</button>
     <button class="tab" onclick="setView('novedades')">⭐ Favoritas</button>
     <button class="tab" onclick="setView('nuevas')">🆕 Novedades</button>
+    <button class="tab" onclick="setView('cartera')">📅 Cartera</button>
   </div>
 </div>
 
@@ -736,6 +772,11 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 <!-- NUEVAS VIEW -->
 <div class="main" id="viewNuevas" style="display:none">
   <div id="nuevasContent"></div>
+</div>
+
+<!-- CARTERA VIEW -->
+<div id="viewCartera" style="display:none">
+  <div id="carteraContent"></div>
 </div>
 
 <!-- CURVA VIEW -->
@@ -1042,26 +1083,32 @@ function renderCards(){
   el.innerHTML=html;
 }
 
-function cardHTML(d){
-  const cc=tirColor(d.tir);
-  const leyC=d.ley==='NY'?'tg-ny':'tg-arg';
-  const isFav=favorites.has(d.tickerUSD);
-  const borderStyle=isFav?'border-color:rgba(212,168,83,0.5);':'';
-  return '<div class="card" style="--cc:'+cc+';'+borderStyle+'" onclick='openModal('+JSON.stringify(d).replace(/'/g,"&#39;")+')'>'+
-    '<button class="fav-btn" onclick="event.stopPropagation();toggleFav(''+d.tickerUSD+'')" style="opacity:'+(isFav?1:0.2)+'">'+( isFav?'⭐':'☆')+'</button>'+
-    '<div class="card-top"><div class="card-name">'+d.nombre+'</div><div class="card-tir" style="color:'+cc+'">'+( d.tirStr||'—')+'</div></div>'+
-    '<div class="card-tickers"><div class="tk">'+d.tickerUSD+'</div>'+(d.tickerARS?'<div class="tk ars">'+d.tickerARS+'</div>':'')+'</div>'+
-    '<div class="card-metrics">'+
-      '<div class="m"><div class="m-l">Precio</div><div class="m-v">'+(d.precio?'U$D '+d.precio.toFixed(2):'—')+'</div></div>'+
-      '<div class="m"><div class="m-l">Paridad</div><div class="m-v" style="'+(d.paridad&&d.paridad<80?'color:var(--red)':'')+'">'+( d.paridad!=null?d.paridad.toFixed(1):'—')+'</div></div>'+
-      '<div class="m"><div class="m-l">Duration</div><div class="m-v">'+(d.duration!=null?d.duration.toFixed(2):'—')+'</div></div>'+
-      '<div class="m"><div class="m-l">Cupón</div><div class="m-v">'+(d.cupon||'—')+'</div></div>'+
-    '</div>'+
-    '<div class="card-foot">'+
-      '<div class="tags"><span class="tg '+leyC+'">'+(d.ley==='NY'?'Ley NY':'Ley ARG')+'</span><span class="tg tg-p">'+(d.pagos||'—')+'</span>'+(parseInt(d.minimo)>1?'<span class="tg tg-p">Mín '+Number(d.minimo).toLocaleString()+'</span>':'')+'</div>'+
-      '<div class="venc">'+(d.vencimiento||'—')+'</div>'+
-    '</div>'+
+function cardHTML(d, extraClass) {
+  const cc = tirColor(d.tir);
+  const leyC = d.ley === 'NY' ? 'tg-ny' : 'tg-arg';
+  const isFav = favorites.has(d.tickerUSD);
+  const idx = allData.indexOf(d);
+  const borderStyle = isFav ? 'border-color:rgba(212,168,83,0.5);' : '';
+  return '<div class="card ' + (extraClass||'') + '" style="--cc:' + cc + ';' + borderStyle + '" data-idx="' + idx + '" onclick="openModalByIdx(this.dataset.idx)">' +
+    '<button class="fav-btn" data-ticker="' + d.tickerUSD + '" onclick="event.stopPropagation();toggleFav(this.dataset.ticker)" style="opacity:' + (isFav ? 1 : 0.2) + '">' + (isFav ? '⭐' : '☆') + '</button>' +
+    '<div class="card-top"><div class="card-name">' + d.nombre + '</div><div class="card-tir" style="color:' + cc + '">' + (d.tirStr || '—') + '</div></div>' +
+    '<div class="card-tickers"><div class="tk">' + d.tickerUSD + '</div>' + (d.tickerARS ? '<div class="tk ars">' + d.tickerARS + '</div>' : '') + '</div>' +
+    '<div class="card-metrics">' +
+      '<div class="m"><div class="m-l">Precio</div><div class="m-v">' + (d.precio ? 'U$D ' + d.precio.toFixed(2) : '—') + '</div></div>' +
+      '<div class="m"><div class="m-l">Paridad</div><div class="m-v" style="' + (d.paridad && d.paridad < 80 ? 'color:var(--red)' : '') + '">' + (d.paridad != null ? d.paridad.toFixed(1) : '—') + '</div></div>' +
+      '<div class="m"><div class="m-l">Duration</div><div class="m-v">' + (d.duration != null ? d.duration.toFixed(2) : '—') + '</div></div>' +
+      '<div class="m"><div class="m-l">Cupón</div><div class="m-v">' + (d.cupon || '—') + '</div></div>' +
+    '</div>' +
+    '<div class="card-foot">' +
+      '<div class="tags"><span class="tg ' + leyC + '">' + (d.ley === 'NY' ? 'Ley NY' : 'Ley ARG') + '</span><span class="tg tg-p">' + (d.pagos || '—') + '</span>' + (parseInt(d.minimo) > 1 ? '<span class="tg tg-p">Mín ' + Number(d.minimo).toLocaleString() + '</span>' : '') + '</div>' +
+      '<div class="venc">' + (d.vencimiento || '—') + '</div>' +
+    '</div>' +
   '</div>';
+}
+
+function openModalByIdx(idx) {
+  const d = allData[parseInt(idx)];
+  if (d) openModal(d);
 }
 
 // ─── TABLE ────────────────────────────────────────────────
@@ -1073,22 +1120,23 @@ function renderTable(data){
     const cc=tirColor(d.tir);
     const leyC=d.ley==='NY'?'tg-ny':'tg-arg';
     const isFav=favorites.has(d.tickerUSD);
-    const starBtn=`<button onclick="event.stopPropagation();toggleFav('${d.tickerUSD}')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0;line-height:1;opacity:${isFav?1:0.25}" title="${isFav?'Quitar favorita':'Marcar favorita'}">${isFav?'⭐':'☆'}</button>`;
-    return `<tr onclick='openModal(${JSON.stringify(d).replace(/'/g,"&#39;")})'>
-      <td style="text-align:center;padding:8px 6px">${starBtn}</td>
-      <td class="nm">${d.nombre}</td>
-      <td style="color:var(--accent2);font-family:'Roboto Mono',monospace">${d.tickerUSD}</td>
-      <td style="color:${cc};font-weight:500">${d.tirStr||'—'}</td>
-      <td>${d.precio?'U$D '+d.precio.toFixed(2):'—'}</td>
-      <td>${d.paridad?.toFixed(1)??'—'}</td>
-      <td>${d.duration?.toFixed(3)??'—'}</td>
-      <td>${d.vencimiento||'—'}</td>
-      <td><span class="tg ${leyC}" style="font-size:9px">${d.ley||'—'}</span></td>
-      <td>${d.pagos||'—'}</td>
-      <td>${d.cupon||'—'}</td>
-      <td style="color:var(--gold)">${d.tickerARS||'—'}</td>
-      <td>${d.minimo?Number(d.minimo).toLocaleString():'—'}</td>
-    </tr>`;
+    const starBtn='<button data-ticker="'+d.tickerUSD+'" onclick="event.stopPropagation();toggleFav(this.dataset.ticker)" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0;line-height:1;opacity:'+(isFav?1:0.25)+'" title="'+(isFav?'Quitar favorita':'Marcar favorita')+'">'+(isFav?'⭐':'☆')+'</button>';
+    const ridx = allData.indexOf(d);
+    return '<tr data-idx="'+ridx+'" onclick="openModalByIdx(this.dataset.idx)">' +
+      '<td style="text-align:center;padding:8px 6px">'+starBtn+'</td>' +
+      '<td class="nm">'+d.nombre+'</td>' +
+      '<td style="color:var(--accent2);font-family:Roboto Mono,monospace">'+d.tickerUSD+'</td>' +
+      '<td style="color:'+cc+';font-weight:500">'+(d.tirStr||'—')+'</td>' +
+      '<td>'+(d.precio?'U$D '+d.precio.toFixed(2):'—')+'</td>' +
+      '<td>'+(d.paridad!=null?d.paridad.toFixed(1):'—')+'</td>' +
+      '<td>'+(d.duration!=null?d.duration.toFixed(3):'—')+'</td>' +
+      '<td>'+(d.vencimiento||'—')+'</td>' +
+      '<td><span class="tg '+leyC+'" style="font-size:9px">'+(d.ley||'—')+'</span></td>' +
+      '<td>'+(d.pagos||'—')+'</td>' +
+      '<td>'+(d.cupon||'—')+'</td>' +
+      '<td style="color:var(--gold)">'+(d.tickerARS||'—')+'</td>' +
+      '<td>'+(d.minimo?Number(d.minimo).toLocaleString():'—')+'</td>' +
+    '</tr>';
   }).join('');
 }
 
@@ -1311,7 +1359,7 @@ curvaCanvas.addEventListener('click',e=>{
   let best=null,bestD=999;
   const allClick=[...(curvaCanvas._pts||[]),...(curvaCanvas._distressed||[])];
   allClick.forEach(p=>{const d=Math.hypot(p.cx-mx,p.cy-my);if(d<bestD){bestD=d;best=p;}});
-  if(best&&bestD<20)openModal(best);
+  if(best&&bestD<20)openModalByIdx(allData.indexOf(best));
 });
 curvaCanvas.addEventListener('mouseleave',()=>{curvaTooltip.style.opacity='0';});
 window.addEventListener('resize',()=>{if(currentView==='curva')renderCurva();});
@@ -1324,10 +1372,11 @@ function setView(v){
   document.getElementById('viewCurva').style.display=v==='curva'?'block':'none';
   document.getElementById('viewFavoritas').style.display=v==='favoritas'?'block':'none';
   document.getElementById('viewNuevas').style.display=v==='nuevas'?'block':'none';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas';
+  document.getElementById('viewCartera').style.display=v==='cartera'?'block':'none';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('active',['cards','table','curva','favoritas','nuevas'][i]===v);
+    t.classList.toggle('active',['cards','table','curva','favoritas','nuevas','cartera'][i]===v);
   });
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
     document.getElementById(id)?.classList.toggle('on',['cards','table','curva'][i]===v);
@@ -1335,6 +1384,7 @@ function setView(v){
   if(v==='curva') setTimeout(renderCurva,50);
   else if(v==='favoritas') renderFavoritas();
   else if(v==='nuevas') renderNuevas();
+  else if(v==='cartera') renderCartera();
   else applyFilters();
 }
 
@@ -1616,6 +1666,173 @@ function renderNuevas() {
   nuevas.sort((a,b) => (b.tir||0) - (a.tir||0));
   el.innerHTML = '<div style="margin-bottom:12px;font-size:12px;color:var(--ia-green)">'+nuevas.length+' ON'+(nuevas.length>1?'s':'')+' nueva'+(nuevas.length>1?'s':'')+' desde tu última visita</div>'+
     '<div class="grid">'+nuevas.map(cardHTML).join('')+'</div>';
+}
+
+// ─── CARTERA / CALENDARIO DE CUPONES ─────────────────────
+let carteraSelected = new Set(JSON.parse(localStorage.getItem('ia_cartera')||'[]'));
+
+const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function toggleCartera(ticker) {
+  if (carteraSelected.has(ticker)) {
+    carteraSelected.delete(ticker);
+  } else {
+    carteraSelected.add(ticker);
+  }
+  localStorage.setItem('ia_cartera', JSON.stringify([...carteraSelected]));
+  renderCartera();
+}
+
+// Calcula los meses del año en que una ON paga cupón
+// basado en la fecha de vencimiento y frecuencia
+function getCouponMonths(d) {
+  const months = new Set();
+  const vDate = parseDate(d.vencimiento);
+  if (!vDate) return months;
+
+  const vMes = vDate.getMonth(); // mes de vencimiento (0-11)
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  let freq = 0;
+  if (d.pagos === 'SEM') freq = 6;
+  else if (d.pagos === 'TRI' || d.pagos === 'TRIM') freq = 3;
+  else if (d.pagos === 'ANUAL') freq = 12;
+  else return months;
+
+  // Proyectar hacia atrás desde el vencimiento para encontrar meses de pago
+  // El mes de vencimiento es el último pago
+  let mes = vMes;
+  for (let i = 0; i < 12; i++) {
+    const m = ((mes % 12) + 12) % 12;
+    months.add(m);
+    mes -= freq;
+  }
+
+  // Filtrar solo los que caen en los próximos 12 meses
+  // Si el bono ya venció, no incluir
+  if (vDate < now) return new Set(); // vencido
+
+  return months;
+}
+
+function renderCartera() {
+  const wrap = document.getElementById('carteraContent');
+  if (!wrap) return;
+
+  const selectedONs = allData.filter(d => carteraSelected.has(d.tickerUSD));
+
+  const calData = Array.from({length:12}, (_,i) => ({month:i, coupons:[], vencen:[]}));
+
+  selectedONs.forEach(d => {
+    const couponMonths = getCouponMonths(d);
+    const vDate = parseDate(d.vencimiento);
+    couponMonths.forEach(m => { calData[m].coupons.push(d); });
+    if (vDate) {
+      const vm = vDate.getMonth();
+      if (!calData[vm].vencen.find(x => x.tickerUSD === d.tickerUSD)) calData[vm].vencen.push(d);
+    }
+  });
+
+  const mesesConCupones = calData.filter(m => m.coupons.length > 0).length;
+  const mesesSinCupones = 12 - mesesConCupones;
+  const tires = selectedONs.filter(d => d.tir !== null).map(d => d.tir);
+  const tirProm = tires.length ? (tires.reduce((a,b)=>a+b,0)/tires.length).toFixed(1)+'%' : '—';
+
+  const h = [];
+
+  h.push('<div class="cartera-wrap">');
+
+  // Summary
+  h.push('<div class="cartera-summary">');
+  h.push('<div class="cs-box"><div class="cs-label">ONs en cartera</div><div class="cs-value">'+(selectedONs.length||'—')+'</div></div>');
+  h.push('<div class="cs-box"><div class="cs-label">TIR promedio</div><div class="cs-value green">'+tirProm+'</div></div>');
+  h.push('<div class="cs-box"><div class="cs-label">Meses con cupón</div><div class="cs-value green">'+(selectedONs.length?mesesConCupones:'—')+'/12</div></div>');
+  h.push('<div class="cs-box"><div class="cs-label">Meses sin cupón</div><div class="cs-value '+(mesesSinCupones>0&&selectedONs.length?'red':'green')+'">'+(selectedONs.length?mesesSinCupones:'—')+'</div></div>');
+  h.push('</div>');
+
+  // Calendar
+  h.push('<div class="calendar-wrap">');
+  h.push('<div class="calendar-title">Calendario de Cupones</div>');
+  h.push('<div class="calendar-sub">Meses en que cobrás cupones según la cartera seleccionada</div>');
+  h.push('<div class="cal-grid">');
+
+  calData.forEach(function(m) {
+    const hasCoupons = m.coupons.length > 0;
+    const hasVenc = m.vencen.length > 0;
+    const cls = hasVenc ? 'vencimiento' : hasCoupons ? 'has-payments' : (selectedONs.length ? 'no-payments' : '');
+    h.push('<div class="cal-month '+cls+'">');
+    h.push('<div class="cal-month-header">'+MESES_FULL[m.month]+(hasVenc?' 🏁':'')+'</div>');
+    h.push('<div class="cal-month-body">');
+    m.coupons.forEach(function(d) { h.push('<div class="cal-chip cupon">'+d.tickerUSD+'</div>'); });
+    m.vencen.forEach(function(d) {
+      const extra = m.coupons.find(function(x){return x.tickerUSD===d.tickerUSD;}) ? ' ★' : ' vence';
+      h.push('<div class="cal-chip vence">'+d.tickerUSD+extra+'</div>');
+    });
+    if (!hasCoupons && !hasVenc && selectedONs.length) {
+      h.push('<div style="font-size:10px;color:var(--muted);text-align:center;padding:4px 0">Sin cobros</div>');
+    }
+    h.push('</div></div>');
+  });
+  h.push('</div></div>');
+
+  // Selector
+  h.push('<div class="cartera-top">');
+
+  // Left panel - all ONs
+  h.push('<div class="cartera-panel">');
+  h.push('<div class="cartera-panel-title">ONs disponibles — clickeá para agregar</div>');
+  h.push('<div class="cartera-list">');
+  const sorted = allData.slice().sort(function(a,b){return (b.tir||0)-(a.tir||0);});
+  sorted.forEach(function(d) {
+    const sel = carteraSelected.has(d.tickerUSD);
+    const cc = tirColor(d.tir);
+    const idx = allData.indexOf(d);
+    h.push('<div class="cartera-item '+(sel?'selected':'')+'" data-ticker="'+d.tickerUSD+'" onclick="toggleCartera(this.dataset.ticker)">');
+    h.push('<div class="ci-ticker">'+d.tickerUSD+'</div>');
+    h.push('<div class="ci-name">'+d.nombre+'</div>');
+    h.push('<div class="ci-tir" style="color:'+cc+'">'+(d.tirStr||'—')+'</div>');
+    h.push('<div class="ci-check">'+(sel?'✅':'⬜')+'</div>');
+    h.push('</div>');
+  });
+  h.push('</div></div>');
+
+  // Right panel - selected
+  h.push('<div class="cartera-panel" style="max-width:260px">');
+  h.push('<div class="cartera-panel-title">En tu cartera ('+selectedONs.length+')</div>');
+  h.push('<div class="cartera-list">');
+  if (!selectedONs.length) {
+    h.push('<div style="color:var(--muted);font-size:12px;padding:8px 0">Ninguna seleccionada aún</div>');
+  }
+  selectedONs.slice().sort(function(a,b){return (b.tir||0)-(a.tir||0);}).forEach(function(d) {
+    const cc = tirColor(d.tir);
+    h.push('<div class="cartera-item selected" data-ticker="'+d.tickerUSD+'" onclick="toggleCartera(this.dataset.ticker)" title="Click para quitar">');
+    h.push('<div class="ci-ticker">'+d.tickerUSD+'</div>');
+    h.push('<div class="ci-name">'+d.nombre+'</div>');
+    h.push('<div class="ci-tir" style="color:'+cc+'">'+(d.tirStr||'—')+'</div>');
+    h.push('<div class="ci-check">✕</div>');
+    h.push('</div>');
+  });
+  h.push('</div>');
+  if (selectedONs.length) {
+    h.push('<button id="vaciar-btn" style="margin-top:10px;width:100%;background:none;border:1px solid var(--red);color:var(--red);border-radius:6px;padding:6px;font-size:11px;cursor:pointer;font-family:Poppins,sans-serif;">Vaciar cartera</button>');
+  }
+  h.push('</div>');
+  h.push('</div>');
+  h.push('</div>');
+
+  wrap.innerHTML = h.join('');
+
+  // Bind vaciar button safely after render
+  const vaciarBtn = document.getElementById('vaciar-btn');
+  if (vaciarBtn) {
+    vaciarBtn.addEventListener('click', function() {
+      carteraSelected.clear();
+      localStorage.removeItem('ia_cartera');
+      renderCartera();
+    });
+  }
 }
 
 // ─── INIT ─────────────────────────────────────────────────
