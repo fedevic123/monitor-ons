@@ -109,7 +109,7 @@ input[type=text]::placeholder{color:var(--muted);}
 /* TABLE */
 .tbl-outer{overflow-x:auto;border-radius:10px;border:1px solid var(--border);}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:800px;}
-thead th{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:10px 10px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;background:var(--surface);position:sticky;top:52px;z-index:5;}
+thead th{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:10px 10px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none;background:var(--surface);position:sticky;top:0;z-index:5;}
 thead th:hover{color:var(--text2);}
 thead th.sa{color:var(--ia-green);}
 tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
@@ -600,7 +600,7 @@ function renderTable(){
     var lc=d.ley==='NY'?'tg-ny':'tg-arg';
     var isF=favs.has(d.tk);
     var isN=newTks.has(d.tk);
-    var star='<button data-t="'+d.tk+'" onclick="event.stopPropagation();toggleFav(this.dataset.t)" style="background:none;border:none;cursor:pointer;font-size:14px;padding:0;opacity:'+(isF?1:.2)+'" title="'+(isF?'Quitar favorita':'Marcar favorita')+'">'+(isF?'⭐':'☆')+'</button>';
+    var star='<button data-t="'+d.tk+'" onclick="event.stopPropagation();toggleFav(this.dataset.t)" style="background:none;border:none;cursor:pointer;font-size:15px;padding:0;line-height:1;color:'+(isF?'#f59e0b':'#fff')+';opacity:'+(isF?1:.3)+';filter:'+(isF?'grayscale(0)':'grayscale(1)')+'" title="'+(isF?'Quitar favorita':'Marcar favorita')+'">'+(isF?'⭐':'☆')+'</button>';
     rows.push(
       '<tr data-i="'+idx+'" onclick="openByIdx(this.dataset.i)">'+
       '<td style="text-align:center;padding:8px 6px">'+star+'</td>'+
@@ -1039,8 +1039,8 @@ function setView(v){
   });
   var el=document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1));
   if(el)el.style.display='block';
-  var noCtrl=['curva','favoritas','nuevas','cartera'];
-  document.getElementById('ctrl').style.display=noCtrl.includes(v)?'none':'block';
+  var noCtrl={'curva':1,'favoritas':1,'nuevas':1,'cartera':1};
+  document.getElementById('ctrl').style.display=noCtrl[v]?'none':'block';
   document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('on',t.dataset.view===v);});
   ['vbC','vbT','vbK'].forEach(function(id,i){var b=document.getElementById(id);if(b)b.classList.toggle('on',['cards','table','curva'][i]===v);});
   if(v==='curva')setTimeout(renderCurva,50);
