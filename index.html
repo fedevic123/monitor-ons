@@ -706,11 +706,16 @@ var MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic
 function cupMonths(d){
   var ms=new Set();
   var vd=pd(d.vc);
-  if(!vd||vd<new Date())return ms;
+  if(!vd)return ms;
   var freq=d.pag==='SEM'?6:d.pag==='TRI'||d.pag==='TRIM'?3:d.pag==='ANUAL'?12:0;
   if(!freq)return ms;
-  var m=vd.getMonth();
-  for(var i=0;i<=Math.ceil(12/freq)+1;i++){ms.add(((m%12)+12)%12);m-=freq;}
+  // El mes de vencimiento = último pago. Retroceder por frecuencia para los demás.
+  var vMes=vd.getMonth(); // 0=Ene
+  var m=vMes;
+  for(var i=0;i<Math.round(12/freq);i++){
+    ms.add(((m%12)+12)%12);
+    m=m-freq;
+  }
   return ms;
 }
 
@@ -775,8 +780,7 @@ function renderCart(){
   h.push('<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px">');
   cal.forEach(function(m){
     var hasSel=m.sel.length>0;
-    var hasVnc=m._hasVenc&&m._hasVenc.some(function(d){return cartSel.has(d.tk);});
-    var cls=hasVnc?'venc':(hasSel?'has':'');
+    var cls=hasSel?'has':'';
     h.push('<div class="cal-month '+cls+'">');
     h.push('<div class="cal-hdr" style="display:flex;justify-content:space-between;align-items:center">');
     h.push('<span>'+MES[m.m]+'</span>');
@@ -786,13 +790,13 @@ function renderCart(){
     // Show ALL ONs for this month — selected ones highlighted
     m.all.forEach(function(d){
       var isSel=cartSel.has(d.tk);
+      var isFav=favs.has(d.tk);
       var cc=tc(d.tir);
-      var isVnc=m._hasVenc&&m._hasVenc.find(function(x){return x.tk===d.tk;});
       h.push('<div class="cal-chip cupon" data-t="'+d.tk+'" onclick="toggleCart(this.dataset.t)" style="cursor:pointer;'+
         (isSel?'background:'+cc+'22;border-color:'+cc+';color:'+cc+';font-weight:700;':'border-color:rgba(255,255,255,.08);color:var(--muted);')+
         '" title="'+(isSel?'Quitar de cartera':'Agregar a cartera')+': '+d.nm+'">');
-      h.push('<span>'+d.tk+'</span>');
-      h.push('<span style="font-size:8px;opacity:.7">'+(d.ts||'')+(isVnc?'🏁':'')+'</span>');
+      h.push('<span>'+(isFav?'⭐ ':'')+d.tk+'</span>');
+      h.push('<span style="font-size:8px;opacity:.7">'+(d.ts||'')+'</span>');
       h.push('</div>');
     });
     if(!m.all.length)h.push('<div style="font-size:10px;color:var(--border2);text-align:center;padding:8px 0">Sin ONs</div>');
@@ -908,17 +912,37 @@ function renderCurva(){
   var pts=[];
   main.forEach(function(d){
     var inf=fset.has(d.tk);
+    var isFav=favs.has(d.tk);
     var cx=tx(d.dur),cy=ty(Math.max(yMin,Math.min(yMax,d.tir)));
     var cc=tc(d.tir);
+    // Glow for filtered
     if(inf){
       ctx.beginPath();ctx.arc(cx,cy,9,0,Math.PI*2);
       ctx.fillStyle=cc+'18';ctx.fill();
       ctx.strokeStyle=cc+'44';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.stroke();
     }
+    // Outer gold ring for favorites
+    if(isFav){
+      ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);
+      ctx.strokeStyle='rgba(245,158,11,0.8)';ctx.lineWidth=2;ctx.stroke();
+      ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);
+      ctx.strokeStyle='rgba(245,158,11,0.2)';ctx.lineWidth=2;ctx.stroke();
+    }
     ctx.beginPath();ctx.arc(cx,cy,inf?5.5:4,0,Math.PI*2);
     ctx.fillStyle=inf?cc:'rgba(80,96,128,.5)';ctx.fill();
-    pts.push(Object.assign({cx:cx,cy:cy,inf:inf},d));
+    pts.push(Object.assign({cx:cx,cy:cy,inf:inf,isFav:isFav},d));
+  });
+  // Draw star label for favorites (always visible, on top)
+  ctx.font='bold 10px DM Mono,monospace';
+  pts.filter(function(p){return p.isFav;}).forEach(function(p){
+    var cc=tc(p.tir);
+    ctx.fillStyle='#f59e0b';
+    ctx.font='11px serif';
+    ctx.fillText('⭐',p.cx+7,p.cy-8);
+    ctx.font='bold 10px DM Mono,monospace';
+    ctx.fillStyle='rgba(245,200,50,0.95)';
+    ctx.fillText(p.tk,p.cx+7,p.cy+3);
   });
   // Labels
   ctx.font='10px DM Mono,monospace';
