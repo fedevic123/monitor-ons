@@ -83,9 +83,9 @@ input[type=text]::placeholder{color:var(--muted);}
 .card.fav-card{border-color:rgba(212,168,83,.4);}
 
 /* STAR BUTTON */
-.star-btn{position:absolute;top:9px;right:10px;background:none;border:none;cursor:pointer;font-size:15px;padding:2px;line-height:1;z-index:2;transition:transform .15s;opacity:.25;}
-.star-btn:hover{transform:scale(1.2);opacity:1!important;}
-.star-btn.active{opacity:1!important;}
+.star-btn{position:absolute;top:9px;right:10px;background:none;border:none;cursor:pointer;font-size:15px;padding:2px;line-height:1;z-index:2;transition:all .15s;color:rgba(255,255,255,0.5);}
+.star-btn:hover{transform:scale(1.2);color:rgba(255,255,255,0.9);}
+.star-btn.active{color:#f59e0b;text-shadow:0 0 8px rgba(245,158,11,0.4);}
 
 .ctop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;padding-right:24px;}
 .cname{font-size:12px;font-weight:600;line-height:1.35;}
@@ -267,7 +267,7 @@ td.nm{font-family:'Poppins',sans-serif;font-size:12px;font-weight:600;max-width:
     <button class="tab" data-view="curva" onclick="setView('curva')">Curva TIR</button>
     <button class="tab" data-view="favoritas" onclick="setView('favoritas')">⭐ Favoritas</button>
     <button class="tab" data-view="nuevas" onclick="setView('nuevas')">🆕 Novedades</button>
-    <button class="tab" data-view="cartera" onclick="setView('cartera')">📅 Cartera</button>
+    <button class="tab" data-view="cartera" onclick="setView('cartera')">📅 Calendario</button>
   </div>
 </div>
 
@@ -653,18 +653,35 @@ function computeNew(){
   var key='ia_seen';
   var raw=localStorage.getItem(key);
   var seen=new Set(raw?JSON.parse(raw):[]);
+  // Find tickers in allData NOT in seen
   newTks=raw?new Set(allData.filter(function(d){return!seen.has(d.tk);}).map(function(d){return d.tk;})):new Set();
+  // Always update seen to current full list
   localStorage.setItem(key,JSON.stringify(allData.map(function(d){return d.tk;})));
+  // Force VSCXD as new until dismissed (added 2025-04-09)
+  var dismissed=JSON.parse(localStorage.getItem('ia_dismissed')||'[]');
+  if(dismissed.indexOf('VSCXD')<0){newTks.add('VSCXD');}
 }
 function renderNew(){
   var el=document.getElementById('newContent');
   if(!newTks.size){
-    el.innerHTML='<div class="state"><div class="ei">✅</div>No hay ONs nuevas desde tu última visita.</div>';
+    el.innerHTML='<div class="state"><div class="ei">✅</div>No hay ONs nuevas desde tu última visita.<br><small style="color:var(--muted);font-size:12px;display:block;margin-top:6px">Cada vez que se agregue una ON al monitor, aparecerá aquí automáticamente.</small></div>';
     return;
   }
   var nw=allData.filter(function(d){return newTks.has(d.tk);});
   nw.sort(function(a,b){return(b.tir||0)-(a.tir||0);});
-  el.innerHTML='<div style="margin-bottom:12px;font-size:12px;color:var(--ia-green)">'+nw.length+' ON'+(nw.length>1?'s':'')+' nueva'+(nw.length>1?'s':'')+' desde tu última visita</div><div class="grid">'+nw.map(cardHTML).join('')+'</div>';
+  var h='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">';
+  h+='<div style="font-size:12px;color:var(--ia-green)">'+nw.length+' ON'+(nw.length>1?'s':'')+' nueva'+(nw.length>1?'s':'')+' incorporada'+(nw.length>1?'s':'')+' al monitor</div>';
+  h+='<button onclick="dismissAll()" style="font-family:Poppins,sans-serif;font-size:11px;padding:5px 12px;border:1px solid var(--muted);border-radius:6px;background:none;color:var(--muted);cursor:pointer;">Marcar todas como vistas</button>';
+  h+='</div>';
+  h+='<div class="grid">'+nw.map(cardHTML).join('')+'</div>';
+  el.innerHTML=h;
+}
+function dismissAll(){
+  var dismissed=JSON.parse(localStorage.getItem('ia_dismissed')||'[]');
+  newTks.forEach(function(tk){if(dismissed.indexOf(tk)<0)dismissed.push(tk);});
+  localStorage.setItem('ia_dismissed',JSON.stringify(dismissed));
+  newTks.clear();
+  renderNew();
 }
 
 // CARTERA
@@ -684,93 +701,133 @@ function toggleCart(tk){
   renderCart();
 }
 var MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var MES3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function cupMonths(d){
+  var ms=new Set();
+  var vd=pd(d.vc);
+  if(!vd||vd<new Date())return ms;
+  var freq=d.pag==='SEM'?6:d.pag==='TRI'||d.pag==='TRIM'?3:d.pag==='ANUAL'?12:0;
+  if(!freq)return ms;
+  var m=vd.getMonth();
+  for(var i=0;i<=Math.ceil(12/freq)+1;i++){ms.add(((m%12)+12)%12);m-=freq;}
+  return ms;
+}
+
+function toggleCart(tk){
+  if(cartSel.has(tk))cartSel.delete(tk);else cartSel.add(tk);
+  localStorage.setItem('ia_cart',JSON.stringify([...cartSel]));
+  renderCart();
+}
+
 function renderCart(){
   var wrap=document.getElementById('cartContent');
   if(!wrap)return;
-  var sel=allData.filter(function(d){return cartSel.has(d.tk);});
-  var cal=MES.map(function(_,i){return{m:i,cups:[],vence:[]};});
-  sel.forEach(function(d){
-    cupMonths(d).forEach(function(m){cal[m].cups.push(d);});
+
+  // Build full calendar matrix: for each ON, which months it pays
+  // And for each month, which ONs pay (sorted by TIR desc)
+  var sortedAll=allData.filter(function(d){return d.vc&&d.pag;}).slice().sort(function(a,b){return(b.tir||0)-(a.tir||0);});
+  
+  // cal[month] = list of ONs that pay that month
+  var cal=Array.from({length:12},function(_,i){return{m:i,all:[],sel:[]};});
+  sortedAll.forEach(function(d){
+    var ms=cupMonths(d);
+    ms.forEach(function(m){
+      cal[m].all.push(d);
+      if(cartSel.has(d.tk))cal[m].sel.push(d);
+    });
+    // Also mark vencimiento month
     var vd=pd(d.vc);
-    if(vd){var vm=vd.getMonth();if(!cal[vm].vence.find(function(x){return x.tk===d.tk;}))cal[vm].vence.push(d);}
+    if(vd){var vm=vd.getMonth();cal[vm]._hasVenc=cal[vm]._hasVenc||[];cal[vm]._hasVenc.push(d);}
   });
-  cal.forEach(function(m){m.cups.sort(function(a,b){return(b.tir||0)-(a.tir||0);});});
-  var mCon=cal.filter(function(m){return m.cups.length>0;}).length;
-  var tires=sel.filter(function(d){return d.tir!==null;}).map(function(d){return d.tir;});
+
+  var selList=allData.filter(function(d){return cartSel.has(d.tk);});
+  var tires=selList.filter(function(d){return d.tir!==null;}).map(function(d){return d.tir;});
   var tirProm=tires.length?(tires.reduce(function(a,b){return a+b;},0)/tires.length).toFixed(1)+'%':'—';
+  var mCon=cal.filter(function(m){return m.sel.length>0;}).length;
 
   var h=[];
   h.push('<div class="cart-wrap">');
-  // Summary
-  h.push('<div class="cart-summary">');
-  h.push('<div class="cs"><div class="cs-l">ONs en cartera</div><div class="cs-v">'+(sel.length||'—')+'</div></div>');
-  h.push('<div class="cs"><div class="cs-l">TIR promedio</div><div class="cs-v g">'+tirProm+'</div></div>');
-  h.push('<div class="cs"><div class="cs-l">Meses cubiertos</div><div class="cs-v g">'+(sel.length?mCon:'—')+'/12</div></div>');
-  h.push('<div class="cs"><div class="cs-l">Meses sin cobro</div><div class="cs-v '+(12-mCon>0&&sel.length?'r':'g')+'">'+(sel.length?12-mCon:'—')+'</div></div>');
+
+  // ── HEADER ──
+  h.push('<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">');
+  h.push('<div>');
+  h.push('<div style="font-size:16px;font-weight:700;color:var(--text)">📅 Calendario de Cupones</div>');
+  h.push('<div style="font-size:12px;color:var(--muted);margin-top:3px">Hacé click en una ON para agregarla a tu cartera. Las seleccionadas se destacan en cada mes.</div>');
   h.push('</div>');
-  // Calendar
-  h.push('<div class="cal-wrap">');
-  h.push('<div class="cal-title">📅 Calendario de Cupones</div>');
-  h.push('<div class="cal-sub">Meses en que cobrás cupones · tickers ordenados de mayor a menor TIR dentro de cada mes</div>');
-  h.push('<div class="cal-grid">');
+  if(cartSel.size>0){
+    h.push('<button class="vaciar" id="vacBtn" style="max-width:160px">✕ Vaciar selección</button>');
+  }
+  h.push('</div>');
+
+  // ── SUMMARY (only if selection) ──
+  if(cartSel.size>0){
+    h.push('<div class="cart-summary" style="margin-bottom:14px">');
+    h.push('<div class="cs"><div class="cs-l">ONs seleccionadas</div><div class="cs-v">'+selList.length+'</div></div>');
+    h.push('<div class="cs"><div class="cs-l">TIR promedio</div><div class="cs-v g">'+tirProm+'</div></div>');
+    h.push('<div class="cs"><div class="cs-l">Meses cubiertos</div><div class="cs-v g">'+mCon+'/12</div></div>');
+    h.push('<div class="cs"><div class="cs-l">Meses sin cobro</div><div class="cs-v '+(12-mCon>0?'r':'g')+'">'+(12-mCon)+'</div></div>');
+    h.push('</div>');
+  }
+
+  // ── MAIN CALENDAR ──
+  // 12 columns, one per month
+  h.push('<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px">');
   cal.forEach(function(m){
-    var hasCup=m.cups.length>0,hasVnc=m.vence.length>0;
-    var cls=hasVnc?'venc':(hasCup?'has':(sel.length?'empty':''));
+    var hasSel=m.sel.length>0;
+    var hasVnc=m._hasVenc&&m._hasVenc.some(function(d){return cartSel.has(d.tk);});
+    var cls=hasVnc?'venc':(hasSel?'has':'');
     h.push('<div class="cal-month '+cls+'">');
-    h.push('<div class="cal-hdr">'+MES[m.m]+(hasVnc?' 🏁':'')+'</div>');
-    h.push('<div class="cal-body">');
-    m.cups.forEach(function(d){
+    h.push('<div class="cal-hdr" style="display:flex;justify-content:space-between;align-items:center">');
+    h.push('<span>'+MES[m.m]+'</span>');
+    if(hasSel)h.push('<span style="font-size:9px;font-weight:400;opacity:.7">'+m.sel.length+' ON'+(m.sel.length>1?'s':'')+'</span>');
+    h.push('</div>');
+    h.push('<div class="cal-body" style="max-height:200px;overflow-y:auto">');
+    // Show ALL ONs for this month — selected ones highlighted
+    m.all.forEach(function(d){
+      var isSel=cartSel.has(d.tk);
       var cc=tc(d.tir);
-      h.push('<div class="cal-chip cupon" style="color:'+cc+';border-color:'+cc+'33"><span style="font-weight:700">'+d.tk+'</span><span style="opacity:.6;font-size:8px">'+(d.ts||'')+'</span></div>');
+      var isVnc=m._hasVenc&&m._hasVenc.find(function(x){return x.tk===d.tk;});
+      h.push('<div class="cal-chip cupon" data-t="'+d.tk+'" onclick="toggleCart(this.dataset.t)" style="cursor:pointer;'+
+        (isSel?'background:'+cc+'22;border-color:'+cc+';color:'+cc+';font-weight:700;':'border-color:rgba(255,255,255,.08);color:var(--muted);')+
+        '" title="'+(isSel?'Quitar de cartera':'Agregar a cartera')+': '+d.nm+'">');
+      h.push('<span>'+d.tk+'</span>');
+      h.push('<span style="font-size:8px;opacity:.7">'+(d.ts||'')+(isVnc?'🏁':'')+'</span>');
+      h.push('</div>');
     });
-    m.vence.forEach(function(d){
-      if(!m.cups.find(function(x){return x.tk===d.tk;}))
-        h.push('<div class="cal-chip vence">'+d.tk+' vence</div>');
-    });
-    if(!hasCup&&!hasVnc&&sel.length)h.push('<div style="font-size:10px;color:var(--muted);text-align:center;padding:6px 0">Sin cobros</div>');
-    if(!sel.length)h.push('<div style="font-size:9px;color:var(--border2);text-align:center;padding:6px 0">—</div>');
+    if(!m.all.length)h.push('<div style="font-size:10px;color:var(--border2);text-align:center;padding:8px 0">Sin ONs</div>');
     h.push('</div></div>');
   });
-  h.push('</div></div>');
-  // Selector
-  h.push('<div class="cart-cols">');
-  // All ONs
-  h.push('<div class="cart-panel">');
-  h.push('<div class="cart-panel-title">ONs disponibles · ordenadas por TIR · clickeá para agregar o quitar</div>');
-  h.push('<div class="cart-list">');
-  allData.slice().sort(function(a,b){return(b.tir||0)-(a.tir||0);}).forEach(function(d){
-    var s=cartSel.has(d.tk);
-    var cc=tc(d.tir);
-    h.push('<div class="ci'+(s?' sel':'')+'" data-t="'+d.tk+'" onclick="toggleCart(this.dataset.t)">');
-    h.push('<div class="ci-tk" style="color:'+cc+'">'+d.tk+'</div>');
-    h.push('<div class="ci-nm">'+d.nm+'</div>');
-    h.push('<div class="ci-tir" style="color:'+cc+'">'+(d.ts||'—')+'</div>');
-    h.push('<div class="ci-chk">'+(s?'✅':'⬜')+'</div>');
-    h.push('</div>');
-  });
-  h.push('</div></div>');
-  // Selected
-  h.push('<div class="cart-panel" style="max-width:270px">');
-  h.push('<div class="cart-panel-title">En tu cartera ('+sel.length+')</div>');
-  h.push('<div class="cart-list">');
-  if(!sel.length)h.push('<div style="color:var(--muted);font-size:12px;padding:8px 0">Ninguna seleccionada aún</div>');
-  sel.slice().sort(function(a,b){return(b.tir||0)-(a.tir||0);}).forEach(function(d){
-    var cc=tc(d.tir);
-    h.push('<div class="ci sel" data-t="'+d.tk+'" onclick="toggleCart(this.dataset.t)" title="Click para quitar">');
-    h.push('<div class="ci-tk" style="color:'+cc+'">'+d.tk+'</div>');
-    h.push('<div class="ci-nm">'+d.nm+'</div>');
-    h.push('<div class="ci-tir" style="color:'+cc+'">'+(d.ts||'—')+'</div>');
-    h.push('<div class="ci-chk">✕</div>');
-    h.push('</div>');
-  });
   h.push('</div>');
-  if(sel.length)h.push('<button class="vaciar" id="vacBtn">✕ Vaciar cartera</button>');
-  h.push('</div></div></div>');
 
+  // ── SELECTED LIST ──
+  if(selList.length>0){
+    h.push('<div class="cart-panel" style="max-width:100%">');
+    h.push('<div class="cart-panel-title">ONs en tu cartera ('+selList.length+') · ordenadas por TIR · click para quitar</div>');
+    h.push('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;max-height:none">');
+    selList.slice().sort(function(a,b){return(b.tir||0)-(a.tir||0);}).forEach(function(d){
+      var cc=tc(d.tir);
+      var ms=[...cupMonths(d)].sort(function(a,b){return a-b;}).map(function(m){return MES3[m];}).join(', ');
+      h.push('<div class="ci sel" data-t="'+d.tk+'" onclick="toggleCart(this.dataset.t)" title="Click para quitar">');
+      h.push('<div>');
+      h.push('<div style="display:flex;align-items:center;gap:6px"><div class="ci-tk" style="color:'+cc+'">'+d.tk+'</div><div class="ci-tir" style="color:'+cc+'">'+(d.ts||'—')+'</div></div>');
+      h.push('<div style="font-size:10px;color:var(--muted);margin-top:2px">Paga: '+ms+'</div>');
+      h.push('</div>');
+      h.push('<div class="ci-chk">✕</div>');
+      h.push('</div>');
+    });
+    h.push('</div></div>');
+  }else{
+    h.push('<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Clickeá cualquier ticker en el calendario para agregar ONs a tu cartera</div>');
+  }
+
+  h.push('</div>');
   wrap.innerHTML=h.join('');
+
   var vb=document.getElementById('vacBtn');
   if(vb)vb.addEventListener('click',function(){cartSel.clear();localStorage.removeItem('ia_cart');renderCart();});
 }
+
 
 // CURVA
 function renderCurva(){
