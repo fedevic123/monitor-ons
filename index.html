@@ -457,7 +457,12 @@ function pd(v){
   if(!v)return null;
   var p=v.split('/');
   if(p.length<3)return null;
-  return new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0]));
+  var a=parseInt(p[0]),b=parseInt(p[1]),yr=parseInt(p[2]);
+  // If first part > 12, it must be D/M/YYYY (e.g. 31/03/2035)
+  // Otherwise assume M/D/YYYY (American format used by most dates in CSV)
+  var mo,dy;
+  if(a>12){mo=b-1;dy=a;}else{mo=a-1;dy=b;}
+  return new Date(yr,mo,dy);
 }
 
 // BANDS
