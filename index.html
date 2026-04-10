@@ -848,47 +848,59 @@ function renderCurva(){
   canvas.width=W*dpr;canvas.height=H*dpr;
   var ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
+
+  // Separate distressed (TIR > 15%) from main
   var allPts=allData.filter(function(d){return d.dur!=null&&d.dur>0&&d.tir!==null&&isFinite(d.tir);});
   if(!allPts.length)return;
-  var tirs=allPts.map(function(d){return d.tir;}).sort(function(a,b){return a-b;});
-  var p95=tirs[Math.floor(tirs.length*.95)];
-  var main=allPts.filter(function(d){return d.tir<=p95+2;});
-  var dist=allPts.filter(function(d){return d.tir>p95+2;});
+  var main=allPts.filter(function(d){return d.tir<=15;});
+  var dist=allPts.filter(function(d){return d.tir>15;});
+
   var pad={l:52,r:20,t:50,b:44};
   var cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
-  var xMax=Math.ceil(Math.max.apply(null,main.map(function(d){return d.dur;})))+0.3;
+
+  // Y range: based ONLY on main points, with small padding
   var yVals=main.map(function(d){return d.tir;});
-  var yMin=Math.floor(Math.min.apply(null,yVals)-.5);
-  var yMax=Math.ceil(Math.max.apply(null,yVals)+.5);
+  var yMin=Math.floor(Math.min.apply(null,yVals)-0.5);
+  var yMax=Math.ceil(Math.max.apply(null,yVals)+0.5);
+  // X range: based on main points
+  var xMax=Math.ceil(Math.max.apply(null,main.map(function(d){return d.dur;}))+0.3);
+
   function tx(v){return pad.l+(v/xMax)*cW;}
   function ty(v){return pad.t+cH-(v-yMin)/(yMax-yMin)*cH;}
-  // Distressed band
+
+  // ── DISTRESSED BAND (fixed height at top)
   var bH=36,bY=8;
   if(dist.length){
     ctx.fillStyle='rgba(239,68,68,.07)';ctx.fillRect(pad.l,bY,cW,bH);
     ctx.strokeStyle='rgba(239,68,68,.2)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
-    ctx.beginPath();ctx.moveTo(pad.l,bY+bH);ctx.lineTo(W-pad.r,bY+bH);ctx.stroke();ctx.setLineDash([]);
-    ctx.fillStyle='rgba(239,68,68,.5)';ctx.font='9px DM Mono,monospace';ctx.textAlign='left';
-    ctx.fillText('DISTRESSED / ALTO RIESGO',pad.l+6,bY+13);
-    dist.sort(function(a,b){return a.dur-b.dur;});
-    dist.forEach(function(d,i){
-      var cx=pad.l+(i+.5)*(cW/dist.length),cy=bY+22;
-      ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='rgba(239,68,68,.8)';ctx.fill();
-      ctx.fillStyle='rgba(239,68,68,.9)';ctx.font='9px DM Mono,monospace';ctx.textAlign='center';
+    ctx.beginPath();ctx.moveTo(pad.l,bY+bH);ctx.lineTo(W-pad.r,bY+bH);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='rgba(239,68,68,.45)';ctx.font='9px DM Mono,monospace';ctx.textAlign='left';
+    ctx.fillText('DISTRESSED / ALTO RIESGO',pad.l+6,bY+12);
+    // Distribute evenly across band
+    var dSorted=dist.slice().sort(function(a,b){return a.dur-b.dur;});
+    dSorted.forEach(function(d,i){
+      var cx=pad.l+(i+0.5)*(cW/dSorted.length),cy=bY+24;
+      ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);
+      ctx.fillStyle='rgba(239,68,68,.8)';ctx.fill();
+      ctx.fillStyle='rgba(239,68,68,.85)';ctx.font='9px DM Mono,monospace';ctx.textAlign='center';
       ctx.fillText(d.tk,cx,cy+13);
     });
-    canvas._dist=dist.map(function(d,i){return Object.assign({cx:pad.l+(i+.5)*(cW/dist.length),cy:bY+22},d);});
-  }else canvas._dist=[];
-  // Grid
-  var yStep=yMax-yMin<=8?1:2;
-  for(var y=Math.ceil(yMin/yStep)*yStep;y<=yMax;y+=yStep){
+    canvas._dist=dSorted.map(function(d,i){return Object.assign({cx:pad.l+(i+0.5)*(cW/dSorted.length),cy:bY+24},d);});
+  }else{canvas._dist=[];}
+
+  // ── GRID horizontal
+  var yRange=yMax-yMin;
+  var yStep=yRange<=6?0.5:yRange<=12?1:2;
+  for(var y=Math.ceil(yMin/yStep)*yStep;y<=yMax;y=Math.round((y+yStep)*100)/100){
     var yy=ty(y);
     ctx.strokeStyle='rgba(15,48,96,.9)';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(W-pad.r,yy);ctx.stroke();
     ctx.fillStyle='#5a6480';ctx.font='10px DM Mono,monospace';ctx.textAlign='right';
-    ctx.fillText(y+'%',pad.l-7,yy+3.5);
+    ctx.fillText(y%1===0?y+'%':y.toFixed(1)+'%',pad.l-7,yy+3.5);
   }
-  var xStep=xMax<=4?.5:1;
+  // ── GRID vertical
+  var xStep=xMax<=4?0.5:1;
   for(var x=0;x<=xMax;x=Math.round((x+xStep)*10)/10){
     var xx=tx(x);
     ctx.strokeStyle='rgba(15,48,96,.7)';ctx.lineWidth=1;
@@ -896,10 +908,13 @@ function renderCurva(){
     ctx.fillStyle='#5a6480';ctx.font='10px DM Mono,monospace';ctx.textAlign='center';
     ctx.fillText(x%1===0?x.toFixed(0):x.toFixed(1),xx,H-pad.b+15);
   }
+
+  // ── AXIS LABELS
   ctx.fillStyle='#6b7a99';ctx.font='11px Poppins,sans-serif';
   ctx.textAlign='center';ctx.fillText('Duración (años)',W/2,H-4);
   ctx.save();ctx.translate(13,pad.t+cH/2);ctx.rotate(-Math.PI/2);ctx.fillText('TIR (%)',0,0);ctx.restore();
-  // Trend
+
+  // ── TREND LINE
   var tp=main.filter(function(d){return d.tir>0;});
   if(tp.length>3){
     var n=tp.length,sx=0,sy=0,sx2=0,sxy=0;
@@ -912,58 +927,84 @@ function renderCurva(){
       ctx.setLineDash([]);
     }
   }
-  // Points
+
+  // ── POINTS (2 passes: normal first, then favorites on top)
   var fset=new Set(filtered.map(function(d){return d.tk;}));
   var pts=[];
+
+  // Pass 1: draw all normal points
   main.forEach(function(d){
     var inf=fset.has(d.tk);
     var isFav=favs.has(d.tk);
     var cx=tx(d.dur),cy=ty(Math.max(yMin,Math.min(yMax,d.tir)));
     var cc=tc(d.tir);
-    // Glow for filtered
-    if(inf){
-      ctx.beginPath();ctx.arc(cx,cy,9,0,Math.PI*2);
+
+    if(inf&&!isFav){
+      ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);
       ctx.fillStyle=cc+'18';ctx.fill();
       ctx.strokeStyle=cc+'44';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.stroke();
+      ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.stroke();
     }
-    // Outer gold ring for favorites
-    if(isFav){
-      ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);
-      ctx.strokeStyle='rgba(245,158,11,0.8)';ctx.lineWidth=2;ctx.stroke();
-      ctx.beginPath();ctx.arc(cx,cy,13,0,Math.PI*2);
-      ctx.strokeStyle='rgba(245,158,11,0.2)';ctx.lineWidth=2;ctx.stroke();
+    if(!isFav){
+      ctx.beginPath();ctx.arc(cx,cy,inf?5:3.5,0,Math.PI*2);
+      ctx.fillStyle=inf?cc:'rgba(80,96,128,.45)';ctx.fill();
     }
-    ctx.beginPath();ctx.arc(cx,cy,inf?5.5:4,0,Math.PI*2);
-    ctx.fillStyle=inf?cc:'rgba(80,96,128,.5)';ctx.fill();
-    pts.push(Object.assign({cx:cx,cy:cy,inf:inf,isFav:isFav},d));
+    pts.push({cx:cx,cy:cy,inf:inf,isFav:isFav,d:d});
   });
-  // Draw star label for favorites (always visible, on top)
-  ctx.font='bold 10px DM Mono,monospace';
-  pts.filter(function(p){return p.isFav;}).forEach(function(p){
-    var cc=tc(p.tir);
-    ctx.fillStyle='#f59e0b';
-    ctx.font='11px serif';
-    ctx.fillText('⭐',p.cx+7,p.cy-8);
-    ctx.font='bold 10px DM Mono,monospace';
-    ctx.fillStyle='rgba(245,200,50,0.95)';
-    ctx.fillText(p.tk,p.cx+7,p.cy+3);
+
+  // Pass 2: draw favorites ON TOP with clean gold ring
+  var favPts=pts.filter(function(p){return p.isFav;});
+  favPts.forEach(function(p){
+    var cc=tc(p.d.tir);
+    var inf=p.inf;
+    // Clean colored dot
+    ctx.beginPath();ctx.arc(p.cx,p.cy,inf?5.5:4.5,0,Math.PI*2);
+    ctx.fillStyle=cc;ctx.fill();
+    // Gold ring
+    ctx.beginPath();ctx.arc(p.cx,p.cy,8,0,Math.PI*2);
+    ctx.strokeStyle='#f59e0b';ctx.lineWidth=2;ctx.stroke();
   });
-  // Labels
+
+  // ── LABELS with anti-overlap
   ctx.font='10px DM Mono,monospace';
   var placed=[];
   function ov(r){return placed.some(function(e){return!(r.x>e.x+e.w+2||r.x+r.w+2<e.x||r.y>e.y+e.h+2||r.y+r.h+2<e.y);});}
-  pts.filter(function(p){return p.inf;}).forEach(function(p){
-    var lbl=p.tk;
+
+  // Labels for favorites always shown (in gold)
+  favPts.forEach(function(p){
+    var lbl=p.d.tk;
+    var tw=ctx.measureText(lbl).width;
+    var tries=[[10,-3],[-tw-10,-3],[2,-14],[2,12]];
+    for(var i=0;i<tries.length;i++){
+      var ox=tries[i][0],oy=tries[i][1];
+      var rect={x:p.cx+ox,y:p.cy+oy-9,w:tw,h:11};
+      if(!ov(rect)){
+        ctx.fillStyle='#f59e0b';
+        ctx.fillText(lbl,p.cx+ox,p.cy+oy+1);
+        placed.push(rect);
+        break;
+      }
+    }
+  });
+
+  // Labels for filtered non-favorites
+  pts.filter(function(p){return p.inf&&!p.isFav;}).forEach(function(p){
+    var lbl=p.d.tk;
     var tw=ctx.measureText(lbl).width;
     var tries=[[7,-3],[-tw-7,-3],[2,-13],[2,11]];
     for(var i=0;i<tries.length;i++){
       var ox=tries[i][0],oy=tries[i][1];
       var rect={x:p.cx+ox,y:p.cy+oy-9,w:tw,h:11};
-      if(!ov(rect)){ctx.fillStyle='rgba(220,228,245,.92)';ctx.fillText(lbl,p.cx+ox,p.cy+oy+1);placed.push(rect);break;}
+      if(!ov(rect)){
+        ctx.fillStyle='rgba(220,228,245,.88)';
+        ctx.fillText(lbl,p.cx+ox,p.cy+oy+1);
+        placed.push(rect);
+        break;
+      }
     }
   });
-  canvas._pts=pts;
+
+  canvas._pts=pts.map(function(p){return Object.assign({},p.d,{cx:p.cx,cy:p.cy});});
 }
 // Curva events
 var cv=document.getElementById('curvaCanvas');
