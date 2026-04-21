@@ -625,6 +625,17 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     margin: 12mm 12mm 16mm;
   }
 }
+
+/* ── CALENDAR EXTRA ── */
+.cal-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:18px; margin-bottom:16px; }
+.cal-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:3px; }
+.cal-sub { font-size:11px; color:var(--muted); margin-bottom:14px; }
+.cart-summary { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:16px; }
+.cs-l { font-size:10px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:3px; }
+.cs-v { font-family:'DM Mono',monospace; font-size:18px; font-weight:500; }
+.cs-v.g { color:var(--ia-green); }
+.cs-v.r { color:var(--red); }
+
 </style>
 
 <div class="header">
@@ -1782,11 +1793,11 @@ function renderCartera() {
 
   // Summary (only if selection)
   if (selectedONs.length > 0) {
-    h.push('<div class="cart-summary" style="margin-bottom:14px">');
-    h.push('<div class="cs"><div class="cs-l">ONs seleccionadas</div><div class="cs-v">' + selectedONs.length + '</div></div>');
-    h.push('<div class="cs"><div class="cs-l">TIR promedio</div><div class="cs-v g">' + tirProm + '</div></div>');
-    h.push('<div class="cs"><div class="cs-l">Meses cubiertos</div><div class="cs-v g">' + mCon + '/12</div></div>');
-    h.push('<div class="cs"><div class="cs-l">Meses sin cobro</div><div class="cs-v ' + (12-mCon > 0 ? 'r' : 'g') + '">' + (12-mCon) + '</div></div>');
+    h.push('<div class="cartera-summary" style="margin-bottom:14px">');
+    h.push('<div class="cs"><div class="cs-label">ONs seleccionadas</div><div class="cs-value">' + selectedONs.length + '</div></div>');
+    h.push('<div class="cs"><div class="cs-label">TIR promedio</div><div class="cs-value g">' + tirProm + '</div></div>');
+    h.push('<div class="cs"><div class="cs-label">Meses cubiertos</div><div class="cs-value g">' + mCon + '/12</div></div>');
+    h.push('<div class="cs"><div class="cs-label">Meses sin cobro</div><div class="cs-v ' + (12-mCon > 0 ? 'r' : 'g') + '">' + (12-mCon) + '</div></div>');
     h.push('</div>');
   }
 
