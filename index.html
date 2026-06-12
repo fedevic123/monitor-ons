@@ -498,6 +498,37 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 .cs-value.green { color:var(--ia-green); }
 .cs-value.red { color:var(--red); }
 
+/* ── SIMULADOR ── */
+.sim-wrap { max-width:1280px; margin:0 auto; padding:12px 24px 60px; }
+.sim-panel { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:8px; }
+.sim-search-box { position:relative; margin-bottom:6px; }
+.sim-search-box input { width:100%; box-sizing:border-box; font-family:Poppins,sans-serif; font-size:13px; padding:9px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); }
+.sim-search-box input:focus { outline:none; border-color:var(--accent2); }
+.sim-results { position:absolute; z-index:30; left:0; right:0; top:100%; margin-top:4px; background:var(--surface2); border:1px solid var(--border2); border-radius:8px; max-height:280px; overflow-y:auto; display:none; box-shadow:0 8px 24px rgba(0,0,0,.4); }
+.sim-res { padding:8px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--border); }
+.sim-res:hover { background:rgba(33,226,171,.08); }
+.sim-res.has { opacity:.55; }
+.sim-res-empty { padding:10px 12px; font-size:12px; color:var(--muted); }
+.sim-tk { font-family:'Roboto Mono',monospace; font-size:11px; color:var(--accent2); }
+.sim-nm { font-size:11px; color:var(--text); }
+.sim-items { display:flex; flex-direction:column; margin-top:8px; }
+.sim-item { display:grid; grid-template-columns:1fr 130px 32px; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px solid var(--border); }
+.sim-item-head { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); border-bottom:1px solid var(--border2); }
+.sim-nom { width:100%; box-sizing:border-box; text-align:right; font-family:'DM Mono',monospace; font-size:13px; padding:6px 8px; background:var(--surface); border:1px solid var(--border); border-radius:6px; color:var(--text); }
+.sim-nom:focus { outline:none; border-color:var(--accent2); }
+.sim-x { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; width:26px; height:26px; cursor:pointer; font-size:11px; }
+.sim-x:hover { border-color:var(--red); color:var(--red); }
+.sim-chart-wrap { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:14px; }
+.sim-chart { display:flex; align-items:flex-end; gap:6px; height:180px; overflow-x:auto; padding-bottom:4px; }
+.sim-bar-col { display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:44px; flex:1; height:100%; }
+.sim-bar-val { font-family:'DM Mono',monospace; font-size:8px; color:var(--muted); margin-bottom:3px; white-space:nowrap; }
+.sim-bar-track { width:100%; flex:1; display:flex; align-items:flex-end; }
+.sim-bar { width:100%; border-radius:3px 3px 0 0; min-height:2px; }
+.sim-bar.pos { background:linear-gradient(180deg,var(--ia-green),rgba(33,226,171,.35)); }
+.sim-bar.neg { background:linear-gradient(180deg,var(--red),rgba(239,68,68,.35)); }
+.sim-bar-lbl { font-size:8px; color:var(--muted); margin-top:5px; white-space:nowrap; }
+@media(max-width:640px){ .sim-wrap{padding:12px 12px 60px} .sim-item{grid-template-columns:1fr 100px 30px} }
+
 /* ── PRINT / PDF ── */
 @media print {
   * {
@@ -659,6 +690,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <button class="tab" onclick="setView('novedades')">⭐ Favoritas</button>
     <button class="tab" onclick="setView('nuevas')">🆕 Novedades</button>
     <button class="tab" onclick="setView('cartera')">📅 Cartera</button>
+    <button class="tab" onclick="setView('simulador')">💵 Simulador</button>
   </div>
 </div>
 
@@ -782,6 +814,9 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 <div id="viewCartera" style="display:none">
   <div id="carteraContent"></div>
 </div>
+
+<!-- SIMULADOR VIEW -->
+<div id="viewSimulador" style="display:none"></div>
 
 <!-- CURVA VIEW -->
 <div class="main" id="viewCurva" style="display:none">
@@ -1410,10 +1445,11 @@ function setView(v){
   document.getElementById('viewFavoritas').style.display=v==='favoritas'?'block':'none';
   document.getElementById('viewNuevas').style.display=v==='nuevas'?'block':'none';
   document.getElementById('viewCartera').style.display=v==='cartera'?'block':'none';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera';
+  document.getElementById('viewSimulador').style.display=v==='simulador'?'block':'none';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('active',['cards','table','curva','favoritas','nuevas','cartera'][i]===v);
+    t.classList.toggle('active',['cards','table','curva','favoritas','nuevas','cartera','simulador'][i]===v);
   });
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
     document.getElementById(id)?.classList.toggle('on',['cards','table','curva'][i]===v);
@@ -1422,6 +1458,7 @@ function setView(v){
   else if(v==='favoritas') renderFavoritas();
   else if(v==='nuevas') renderNuevas();
   else if(v==='cartera') renderCartera();
+  else if(v==='simulador') renderSimulador();
   else applyFilters();
 }
 
@@ -1464,6 +1501,48 @@ function closeModal(){document.getElementById('overlay').classList.remove('open'
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
 // ─── FLUJO ────────────────────────────────────────────────
+// Parsea el CSV de la pestaña de un bono y devuelve el cronograma por 100 VN.
+// ESTRUCTURA: header con col2='Fecha', col3='Amorti'(principal), col6='Int.', col7='Cshf'(flujo neto), col10='Par V.', col11='Dur'.
+function parseFlujoRows(txt){
+  const rows=txt.split('\n').map(r=>r.trim()).filter(r=>r);
+  // Buscar fila header buscando "Fecha" y "Cshf" o "Int."
+  let dataStartIdx = -1;
+  for(let i=0;i<rows.length;i++){
+    const c=splitCSV(rows[i]);
+    const joined=c.join(',').toLowerCase();
+    if((joined.includes('fecha')||joined.includes('pricipal'))&&(joined.includes('cshf')||joined.includes('int.'))){
+      dataStartIdx = i + 2; // saltar la fila auxiliar T+1/T+0/T+2
+      break;
+    }
+  }
+  // Fallback: primera fila donde col2 parece fecha
+  if(dataStartIdx < 0){
+    for(let i=5;i<rows.length;i++){
+      const c=splitCSV(rows[i]);
+      if(c.length >= 8 && isDateString((c[2]||'').trim())){ dataStartIdx = i; break; }
+    }
+  }
+  if(dataStartIdx < 0) return [];
+
+  const flujoRows=[];
+  for(let i=dataStartIdx;i<rows.length;i++){
+    const c=splitCSV(rows[i]);
+    if(c.length < 8) continue;
+    const fecha = cl(c[2]||'');
+    if(!isDateString(fecha)) continue;
+    const raw3 = cl(c[3]||'');
+    if(raw3.toLowerCase().includes('total')||raw3.toLowerCase().includes('suma')) continue;
+    const principal = parseNum(cl(c[3]||''));  // col 3 = Amorti (principal)
+    const interes   = parseNum(cl(c[6]||''));  // col 6 = Int.
+    const flujo     = parseNum(cl(c[7]||''));  // col 7 = Cshf (flujo neto)
+    const parV      = parseNum(cl(c[10]||'')); // col 10 = Par V.
+    const dur       = parseNum(cl(c[11]||'')); // col 11 = Dur
+    if(flujo===null && interes===null && principal===null) continue;
+    flujoRows.push({fecha, principal, interes, flujo, parV, dur});
+  }
+  return flujoRows;
+}
+
 async function loadFlujo(d){
   const container=document.getElementById('flujoContainer');
   const status=document.getElementById('flujoStatus');
@@ -1480,68 +1559,7 @@ async function loadFlujo(d){
     const url=`${BASE_CSV}&gid=${GID_MAP[tab]}&t=${Date.now()}`;
     const r=await fetch(url);
     const txt=await r.text();
-    const rows=txt.split('\n').map(r=>r.trim()).filter(r=>r);
-
-    // ESTRUCTURA EXACTA (verificada en YMCJ):
-    // Fila 21 (idx~20): header → col0='', col1='', col2='Fecha', col3='Pricipal', col4='v/r',
-    //   col5='B+Cup./Cap-Floor', col6='Int.', col7='Cshf', col8='Dias', col9='NAV',
-    //   col10='Par V.', col11='Dur', col12='PPV', col13='Days Accr.', col14='Ant y Prox Vto'
-    // Fila 22 (idx~21): T+1,T+0,T+2 (fila auxiliar — ignorar)
-    // Fila 23+: datos. Col 0-1 son fechas T+1/T+0, col2 es fecha T+2 (la que mostramos),
-    //   col3=Principal, col6=Int., col7=Cshf(flujo neto), col9=NAV, col10=Par V., col11=Dur
-
-    // Buscar fila header buscando "Fecha" y "Cshf" o "Principal"
-    let dataStartIdx = -1;
-    for(let i=0;i<rows.length;i++){
-      const c=splitCSV(rows[i]);
-      const joined=c.join(',').toLowerCase();
-      if((joined.includes('fecha')||joined.includes('pricipal'))&&(joined.includes('cshf')||joined.includes('int.'))){
-        // siguiente fila útil (salteamos la fila T+1/T+0/T+2)
-        dataStartIdx = i + 2;
-        break;
-      }
-    }
-
-    // Fallback: buscar primera fila donde col2 parece fecha
-    if(dataStartIdx < 0){
-      for(let i=5;i<rows.length;i++){
-        const c=splitCSV(rows[i]);
-        if(c.length >= 8 && isDateString((c[2]||'').trim())){
-          dataStartIdx = i;
-          break;
-        }
-      }
-    }
-
-    if(dataStartIdx < 0){
-      container.innerHTML=`<div class="flujo-err">No se pudo encontrar el inicio de datos del flujo.<br><small>Pestaña: ${tab}</small></div>`;
-      return;
-    }
-
-    const flujoRows=[];
-    for(let i=dataStartIdx;i<rows.length;i++){
-      const c=splitCSV(rows[i]);
-      if(c.length < 8) continue;
-
-      // Col 2 = fecha (T+2, la fecha de liquidación real)
-      const fecha = cl(c[2]||'');
-      if(!isDateString(fecha)) continue;
-
-      // Ignorar fila de totales (col3 suele tener suma grande o texto)
-      const raw3 = cl(c[3]||'');
-      if(raw3.toLowerCase().includes('total')||raw3.toLowerCase().includes('suma')) continue;
-
-      const principal = parseNum(cl(c[3]||''));  // col 3 = Principal
-      const interes   = parseNum(cl(c[6]||''));  // col 6 = Int.
-      const flujo     = parseNum(cl(c[7]||''));  // col 7 = Cshf (flujo neto)
-      const parV      = parseNum(cl(c[10]||'')); // col 10 = Par V.
-      const dur       = parseNum(cl(c[11]||'')); // col 11 = Dur
-
-      // Ignorar filas vacías o sin flujo
-      if(flujo===null && interes===null && principal===null) continue;
-
-      flujoRows.push({fecha, principal, interes, flujo, parV, dur});
-    }
+    const flujoRows=parseFlujoRows(txt);
 
     if(!flujoRows.length){
       container.innerHTML=`<div class="flujo-err">No se encontraron filas de flujo válidas.<br><small>Pestaña: ${tab} · Filas totales: ${rows.length} · Inicio datos: fila ${dataStartIdx}</small></div>`;
@@ -1992,6 +2010,159 @@ function exportCurrentView() {
   if (printSub) printSub.textContent = sub;
   if (printDate) printDate.textContent = dateStr;
   window.print();
+}
+
+// ═══ SIMULADOR DE FLUJO DE FONDOS ═══════════════════════════
+let simItems = {};
+try { simItems = JSON.parse(localStorage.getItem('ia_simulador') || '{}'); } catch(e) { simItems = {}; }
+const flujoCache = {};   // tab -> filas parseadas (por 100 VN)
+
+function simSave(){ try { localStorage.setItem('ia_simulador', JSON.stringify(simItems)); } catch(e){} }
+function fmtUSD(v){ if(v==null||isNaN(v)) return '—'; const s=v<0?'-':''; return s+'US$ '+fmtNum(Math.abs(v)); }
+function fmtNum0(v){ if(v==null||isNaN(v)) return ''; return Math.round(v).toLocaleString('es-AR'); }
+
+function simAdd(ticker){ if(!ticker) return; if(simItems[ticker]===undefined) simItems[ticker]=1000; simSave(); renderSimulador(); }
+function simAddFromSearch(t){ simAdd(t); }
+function simRemove(ticker){ delete simItems[ticker]; simSave(); renderSimulador(); }
+function simClear(){ simItems={}; simSave(); renderSimulador(); }
+function simSetNominal(ticker, val){
+  const n=parseFloat(String(val).replace(/[^0-9.\-]/g,''));
+  simItems[ticker]=(isNaN(n)||n<0)?0:n; simSave(); computeAndRenderSim();
+}
+
+// Trae y cachea el cronograma (por 100 VN) de un bono. Devuelve [] si no hay/falla.
+async function fetchBondSchedule(tickerUSD){
+  const tab=tickerToTab(tickerUSD);
+  if(!tab || GID_MAP[tab]===undefined) return [];
+  if(flujoCache[tab]) return flujoCache[tab];
+  try {
+    const r=await fetch(`${BASE_CSV}&gid=${GID_MAP[tab]}&t=${Date.now()}`);
+    const txt=await r.text();
+    const rows=parseFlujoRows(txt).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
+    flujoCache[tab]=rows;
+    return rows;
+  } catch(e){ return []; }
+}
+
+// Consolida el flujo de fondos de todos los instrumentos cargados (escala por nominal/100).
+async function computeConsolidado(){
+  const tickers=Object.keys(simItems);
+  const results=await Promise.all(tickers.map(async t=>({ticker:t, nominal:simItems[t], rows:await fetchBondSchedule(t)})));
+  const byDate={};   // 'yyyy-mm-dd' -> {date, interes, amort, flujo}
+  let invInicial=0, totalCobrar=0; const errores=[];
+  results.forEach(({ticker, nominal, rows})=>{
+    if(!rows.length){ errores.push(ticker); return; }
+    const f=nominal/100;
+    rows.forEach(row=>{
+      if(!row.flujo) return;   // saltar cupones pasados/zero (Cshf=0): el flujo forward = compra + cobros futuros
+      const key=row.date.toISOString().slice(0,10);
+      if(!byDate[key]) byDate[key]={date:row.date, interes:0, amort:0, flujo:0};
+      const fl=(row.flujo||0)*f;
+      byDate[key].interes += (row.interes||0)*f;
+      byDate[key].amort   += (row.principal||0)*f;
+      byDate[key].flujo   += fl;
+      if(fl<0) invInicial+=fl; else totalCobrar+=fl;
+    });
+  });
+  const dates=Object.values(byDate).sort((a,b)=>a.date-b.date);
+  let acc=0; dates.forEach(d=>{ acc+=d.flujo; d.acc=acc; });
+  return { dates, invInicial, totalCobrar, neto:invInicial+totalCobrar, errores, count:tickers.length };
+}
+
+// ── Render del Simulador ──
+function renderSimulador(){
+  const wrap=document.getElementById('viewSimulador'); if(!wrap) return;
+  const tickers=Object.keys(simItems);
+  let h='<div class="sim-wrap">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">';
+  h+='<div><div style="font-size:16px;font-weight:700;color:var(--text)">💵 Simulador de Flujo de Fondos</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Cargá un nominal (VN) por instrumento y se arma el flujo consolidado. Valores en USD por VN.</div></div>';
+  if(tickers.length) h+='<button onclick="simClear()" style="font-family:Poppins,sans-serif;padding:6px 14px;border:1px solid var(--red);color:var(--red);background:none;border-radius:6px;font-size:11px;cursor:pointer;">✕ Vaciar</button>';
+  h+='</div>';
+  // Panel de carga
+  h+='<div class="sim-panel">';
+  h+='<div class="sim-search-box"><input id="simSearch" type="text" placeholder="Buscar instrumento por ticker o nombre…" oninput="simRenderSearch(this.value)" autocomplete="off"><div id="simResults" class="sim-results"></div></div>';
+  if(!tickers.length){
+    h+='<div style="padding:8px 4px;color:var(--muted);font-size:12px;">Todavía no agregaste instrumentos. Buscá arriba y hacé click para sumarlos.</div>';
+  } else {
+    h+='<div class="sim-items"><div class="sim-item sim-item-head"><div>Instrumento</div><div style="text-align:right">Nominal (VN)</div><div></div></div>';
+    tickers.forEach(t=>{
+      const d=allData.find(x=>x.tickerUSD===t); const nm=d?d.nombre:'';
+      h+=`<div class="sim-item"><div><span class="sim-tk">${t}</span> <span class="sim-nm">${nm}</span></div>`+
+         `<div><input class="sim-nom" type="text" inputmode="numeric" value="${simItems[t]}" onchange="simSetNominal('${t}', this.value)"></div>`+
+         `<div style="text-align:right"><button class="sim-x" onclick="simRemove('${t}')" title="Quitar">✕</button></div></div>`;
+    });
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='<div id="simResultados"></div>';
+  h+='</div>';
+  wrap.innerHTML=h;
+  if(tickers.length) computeAndRenderSim();
+}
+
+function simRenderSearch(q){
+  const box=document.getElementById('simResults'); if(!box) return;
+  q=(q||'').trim().toLowerCase();
+  if(!q){ box.innerHTML=''; box.style.display='none'; return; }
+  const matches=allData.filter(d=>(d.tickerUSD||'').toLowerCase().includes(q)||(d.nombre||'').toLowerCase().includes(q)).slice(0,8);
+  if(!matches.length){ box.innerHTML='<div class="sim-res-empty">Sin resultados</div>'; box.style.display='block'; return; }
+  box.innerHTML=matches.map(d=>{
+    const has=simItems[d.tickerUSD]!==undefined;
+    return `<div class="sim-res${has?' has':''}" onclick="simAddFromSearch('${d.tickerUSD}')"><span class="sim-tk">${d.tickerUSD}</span> <span class="sim-nm">${d.nombre}</span>${has?'<span style="color:var(--ia-green);font-size:10px;margin-left:auto">✓ agregado</span>':''}</div>`;
+  }).join('');
+  box.style.display='block';
+}
+
+async function computeAndRenderSim(){
+  const cont=document.getElementById('simResultados'); if(!cont) return;
+  if(!Object.keys(simItems).length){ cont.innerHTML=''; return; }
+  cont.innerHTML='<div class="flujo-loading"><div class="flujo-spinner"></div>Calculando flujo consolidado…</div>';
+  const res=await computeConsolidado();
+  let h='<div class="cartera-summary" style="margin:16px 0 14px">';
+  h+=`<div class="cs-box"><div class="cs-label">Instrumentos</div><div class="cs-value">${res.count}</div></div>`;
+  h+=`<div class="cs-box"><div class="cs-label">Inversión inicial</div><div class="cs-value red">${fmtUSD(res.invInicial)}</div></div>`;
+  h+=`<div class="cs-box"><div class="cs-label">Total a cobrar</div><div class="cs-value green">${fmtUSD(res.totalCobrar)}</div></div>`;
+  h+=`<div class="cs-box"><div class="cs-label">Resultado neto</div><div class="cs-value ${res.neto>=0?'green':'red'}">${fmtUSD(res.neto)}</div></div>`;
+  h+='</div>';
+  if(res.errores.length) h+=`<div style="font-size:11px;color:var(--gold2);margin-bottom:10px">⚠ Sin cronograma disponible para: ${res.errores.join(', ')} (omitidos del consolidado)</div>`;
+  h+=simChartHTML(res.dates);
+  h+=simTableHTML(res.dates);
+  cont.innerHTML=h;
+}
+
+function simChartHTML(dates){
+  if(!dates.length) return '';
+  const byMonth={};
+  dates.forEach(d=>{ const k=d.date.getFullYear()+'-'+String(d.date.getMonth()+1).padStart(2,'0'); byMonth[k]=(byMonth[k]||0)+d.flujo; });
+  const keys=Object.keys(byMonth).sort();
+  const maxAbs=Math.max(...keys.map(k=>Math.abs(byMonth[k])),1);
+  const MS3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  let bars='';
+  keys.forEach(k=>{
+    const v=byMonth[k]; const pct=Math.max(2, Math.abs(v)/maxAbs*100);
+    const parts=k.split('-'); const lbl=MS3[parseInt(parts[1])-1]+' '+parts[0].slice(2);
+    bars+=`<div class="sim-bar-col" title="${lbl}: ${fmtUSD(v)}"><div class="sim-bar-val">${Math.abs(v)>=1?fmtNum0(v):''}</div>`+
+      `<div class="sim-bar-track"><div class="sim-bar ${v>=0?'pos':'neg'}" style="height:${pct}%"></div></div>`+
+      `<div class="sim-bar-lbl">${lbl}</div></div>`;
+  });
+  return `<div class="sim-chart-wrap"><div class="cal-title" style="margin-bottom:10px">Flujo neto por mes (USD)</div><div class="sim-chart">${bars}</div></div>`;
+}
+
+function simTableHTML(dates){
+  if(!dates.length) return '<div style="color:var(--muted);font-size:12px">Sin pagos en el cronograma.</div>';
+  let h='<div class="cal-title" style="margin:6px 0 8px">Detalle por fecha (USD)</div>';
+  h+='<div class="flujo-tbl-wrap"><table class="flujo-tbl"><thead><tr><th style="text-align:left">Fecha</th><th>Intereses</th><th>Amortización</th><th>Flujo neto</th><th>Acumulado</th></tr></thead><tbody>';
+  const today=new Date(); today.setHours(0,0,0,0);
+  dates.forEach(d=>{
+    const past=d.date<today; const fl=d.flujo;
+    const dstr=d.date.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+    h+=`<tr style="${past?'opacity:.5':''}"><td style="text-align:left">${dstr}</td>`+
+       `<td>${d.interes?fmtNum(d.interes):'—'}</td><td>${d.amort?fmtNum(d.amort):'—'}</td>`+
+       `<td style="color:${fl<0?'var(--red)':'var(--ia-green)'};font-weight:600">${fmtNum(fl)}</td>`+
+       `<td style="color:${d.acc<0?'var(--red)':'var(--text)'}">${fmtNum(d.acc)}</td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  return h;
 }
 
 // ─── INIT ─────────────────────────────────────────────────
