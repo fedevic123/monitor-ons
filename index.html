@@ -1992,7 +1992,9 @@ function exportCurrentView() {
   window.print();
 }
 
-
+// ─── INIT ─────────────────────────────────────────────────
+loadMonitor();
+setInterval(loadMonitor, 5*60*1000);
 
 </script>
   <!-- IA Brand Footer -->
