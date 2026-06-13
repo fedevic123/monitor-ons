@@ -527,6 +527,8 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 .sim-bar.pos { background:linear-gradient(180deg,var(--ia-green),rgba(33,226,171,.35)); }
 .sim-bar.neg { background:linear-gradient(180deg,var(--red),rgba(239,68,68,.35)); }
 .sim-bar-lbl { font-size:8px; color:var(--muted); margin-top:5px; white-space:nowrap; }
+.sim-export-btn { font-family:'Poppins',sans-serif; font-size:11px; font-weight:600; padding:7px 16px; border-radius:8px; border:1px solid var(--ia-green); color:var(--ia-green); background:rgba(33,226,171,.06); cursor:pointer; transition:all .15s; }
+.sim-export-btn:hover { background:rgba(33,226,171,.15); }
 @media(max-width:640px){ .sim-wrap{padding:12px 12px 60px} .sim-item{grid-template-columns:1fr 100px 30px} }
 
 /* ── PRINT / PDF ── */
@@ -687,9 +689,9 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <button class="tab active" onclick="setView('cards')">Tarjetas</button>
     <button class="tab" onclick="setView('table')">Tabla</button>
     <button class="tab" onclick="setView('curva')">Curva TIR</button>
-    <button class="tab" onclick="setView('novedades')">⭐ Favoritas</button>
+    <button class="tab" onclick="setView('favoritas')">⭐ Favoritas</button>
     <button class="tab" onclick="setView('nuevas')">🆕 Novedades</button>
-    <button class="tab" onclick="setView('cartera')">📅 Cartera</button>
+    <button class="tab" onclick="setView('cartera')">📅 Calendario</button>
     <button class="tab" onclick="setView('simulador')">💵 Simulador</button>
   </div>
 </div>
@@ -1446,6 +1448,7 @@ function setView(v){
   document.getElementById('viewNuevas').style.display=v==='nuevas'?'block':'none';
   document.getElementById('viewCartera').style.display=v==='cartera'?'block':'none';
   document.getElementById('viewSimulador').style.display=v==='simulador'?'block':'none';
+  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=v==='simulador'?'none':'';
   const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('.tab').forEach((t,i)=>{
@@ -2118,6 +2121,7 @@ async function computeAndRenderSim(){
   if(!Object.keys(simItems).length){ cont.innerHTML=''; return; }
   cont.innerHTML='<div class="flujo-loading"><div class="flujo-spinner"></div>Calculando flujo consolidado…</div>';
   const res=await computeConsolidado();
+  lastSimData={ dates:res.dates, invInicial:res.invInicial, totalCobrar:res.totalCobrar, neto:res.neto, items:{...simItems} };
   let h='<div class="cartera-summary" style="margin:16px 0 14px">';
   h+=`<div class="cs-box"><div class="cs-label">Instrumentos</div><div class="cs-value">${res.count}</div></div>`;
   h+=`<div class="cs-box"><div class="cs-label">Inversión inicial</div><div class="cs-value red">${fmtUSD(res.invInicial)}</div></div>`;
@@ -2125,43 +2129,95 @@ async function computeAndRenderSim(){
   h+=`<div class="cs-box"><div class="cs-label">Resultado neto</div><div class="cs-value ${res.neto>=0?'green':'red'}">${fmtUSD(res.neto)}</div></div>`;
   h+='</div>';
   if(res.errores.length) h+=`<div style="font-size:11px;color:var(--gold2);margin-bottom:10px">⚠ Sin cronograma disponible para: ${res.errores.join(', ')} (omitidos del consolidado)</div>`;
+  if(res.dates.length) h+='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button onclick="exportSimExcel()" class="sim-export-btn">⬇ Exportar a Excel</button></div>';
   h+=simChartHTML(res.dates);
   h+=simTableHTML(res.dates);
   cont.innerHTML=h;
 }
 
+// ── Export del flujo a Excel (.xlsx vía SheetJS, fallback CSV) ──
+let lastSimData=null;
+function round2(v){ return Math.round((v||0)*100)/100; }
+function simDateAR(d){ return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+
+async function exportSimExcel(){
+  if(!lastSimData||!lastSimData.dates.length){ alert('No hay flujo para exportar.'); return; }
+  const {dates, invInicial, totalCobrar, neto, items}=lastSimData;
+  try {
+    if(!window.XLSX) await loadScript('https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js');
+    if(!window.XLSX) throw new Error('no XLSX');
+    const aoa=[];
+    aoa.push(['Simulador de Flujo de Fondos · Inversiones Andinas']);
+    aoa.push(['Generado', new Date().toLocaleString('es-AR')]);
+    aoa.push([]);
+    aoa.push(['Instrumento','Nominal (VN)']);
+    Object.keys(items).forEach(t=>{ const d=allData.find(x=>x.tickerUSD===t); aoa.push([t+(d?' · '+d.nombre:''), items[t]]); });
+    aoa.push([]);
+    aoa.push(['Inversión inicial (USD)', round2(invInicial)]);
+    aoa.push(['Total a cobrar (USD)', round2(totalCobrar)]);
+    aoa.push(['Resultado neto (USD)', round2(neto)]);
+    aoa.push([]);
+    aoa.push(['Fecha','Renta','Amortización','Renta + Amortización','Flujo Neto']);
+    let tR=0,tA=0,tF=0;
+    dates.forEach(d=>{ const ra=(d.interes||0)+(d.amort||0); tR+=d.interes||0; tA+=d.amort||0; tF+=d.flujo;
+      aoa.push([simDateAR(d.date), round2(d.interes), round2(d.amort), round2(ra), round2(d.flujo)]); });
+    aoa.push(['TOTAL', round2(tR), round2(tA), round2(tR+tA), round2(tF)]);
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols']=[{wch:32},{wch:16},{wch:16},{wch:22},{wch:16}];
+    const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Flujo de Fondos');
+    XLSX.writeFile(wb, 'Flujo_de_fondos.xlsx');
+  } catch(e){ exportSimCSV(); }
+}
+
+function exportSimCSV(){
+  if(!lastSimData) return;
+  const {dates}=lastSimData;
+  const en=v=>round2(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  let csv='Fecha;Renta;Amortización;Renta + Amortización;Flujo Neto\n';
+  dates.forEach(d=>{ const ra=(d.interes||0)+(d.amort||0); csv+=`${simDateAR(d.date)};${en(d.interes)};${en(d.amort)};${en(ra)};${en(d.flujo)}\n`; });
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Flujo_de_fondos.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+
 function simChartHTML(dates){
   if(!dates.length) return '';
   const byMonth={};
-  dates.forEach(d=>{ const k=d.date.getFullYear()+'-'+String(d.date.getMonth()+1).padStart(2,'0'); byMonth[k]=(byMonth[k]||0)+d.flujo; });
+  // Solo cobros (renta + amortización): se excluye el desembolso inicial para no aplastar la escala
+  dates.forEach(d=>{ if(d.flujo<=0) return; const k=d.date.getFullYear()+'-'+String(d.date.getMonth()+1).padStart(2,'0'); byMonth[k]=(byMonth[k]||0)+d.flujo; });
   const keys=Object.keys(byMonth).sort();
-  const maxAbs=Math.max(...keys.map(k=>Math.abs(byMonth[k])),1);
+  if(!keys.length) return '';
+  const maxAbs=Math.max(...keys.map(k=>byMonth[k]),1);
   const MS3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   let bars='';
   keys.forEach(k=>{
-    const v=byMonth[k]; const pct=Math.max(2, Math.abs(v)/maxAbs*100);
+    const v=byMonth[k]; const pct=Math.max(2, v/maxAbs*100);
     const parts=k.split('-'); const lbl=MS3[parseInt(parts[1])-1]+' '+parts[0].slice(2);
-    bars+=`<div class="sim-bar-col" title="${lbl}: ${fmtUSD(v)}"><div class="sim-bar-val">${Math.abs(v)>=1?fmtNum0(v):''}</div>`+
-      `<div class="sim-bar-track"><div class="sim-bar ${v>=0?'pos':'neg'}" style="height:${pct}%"></div></div>`+
+    bars+=`<div class="sim-bar-col" title="${lbl}: ${fmtUSD(v)}"><div class="sim-bar-val">${v>=1?fmtNum0(v):''}</div>`+
+      `<div class="sim-bar-track"><div class="sim-bar pos" style="height:${pct}%"></div></div>`+
       `<div class="sim-bar-lbl">${lbl}</div></div>`;
   });
-  return `<div class="sim-chart-wrap"><div class="cal-title" style="margin-bottom:10px">Flujo neto por mes (USD)</div><div class="sim-chart">${bars}</div></div>`;
+  return `<div class="sim-chart-wrap"><div class="cal-title" style="margin-bottom:10px">Cobros por mes · renta + amortización (USD)</div><div class="sim-chart">${bars}</div></div>`;
 }
 
 function simTableHTML(dates){
   if(!dates.length) return '<div style="color:var(--muted);font-size:12px">Sin pagos en el cronograma.</div>';
   let h='<div class="cal-title" style="margin:6px 0 8px">Detalle por fecha (USD)</div>';
-  h+='<div class="flujo-tbl-wrap"><table class="flujo-tbl"><thead><tr><th style="text-align:left">Fecha</th><th>Intereses</th><th>Amortización</th><th>Flujo neto</th><th>Acumulado</th></tr></thead><tbody>';
+  h+='<div class="flujo-tbl-wrap"><table class="flujo-tbl"><thead><tr><th style="text-align:left">Fecha</th><th>Renta</th><th>Amortización</th><th>Renta + Amortización</th><th>Flujo Neto</th></tr></thead><tbody>';
   const today=new Date(); today.setHours(0,0,0,0);
+  let tR=0,tA=0,tF=0;
   dates.forEach(d=>{
-    const past=d.date<today; const fl=d.flujo;
+    const past=d.date<today; const fl=d.flujo; const ra=(d.interes||0)+(d.amort||0);
+    tR+=d.interes||0; tA+=d.amort||0; tF+=fl;
     const dstr=d.date.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
     h+=`<tr style="${past?'opacity:.5':''}"><td style="text-align:left">${dstr}</td>`+
        `<td>${d.interes?fmtNum(d.interes):'—'}</td><td>${d.amort?fmtNum(d.amort):'—'}</td>`+
-       `<td style="color:${fl<0?'var(--red)':'var(--ia-green)'};font-weight:600">${fmtNum(fl)}</td>`+
-       `<td style="color:${d.acc<0?'var(--red)':'var(--text)'}">${fmtNum(d.acc)}</td></tr>`;
+       `<td>${ra?fmtNum(ra):'—'}</td>`+
+       `<td style="color:${fl<0?'var(--red)':'var(--ia-green)'};font-weight:600">${fmtNum(fl)}</td></tr>`;
   });
-  h+='</tbody></table></div>';
+  h+=`</tbody><tfoot><tr><td style="text-align:left">TOTAL</td><td>${fmtNum(tR)}</td><td>${fmtNum(tA)}</td><td>${fmtNum(tR+tA)}</td><td style="color:${tF<0?'var(--red)':'var(--ia-green)'};font-weight:700">${fmtNum(tF)}</td></tr></tfoot>`;
+  h+='</table></div>';
   return h;
 }
 
@@ -2186,7 +2242,7 @@ setInterval(loadMonitor, 5*60*1000);
         <div style="font-family:'Roboto',sans-serif;font-size:10px;color:var(--muted);">Monitor ONs Hard Dollar · inversionesandinas.com</div>
       </div>
     </div>
-    <button onclick="exportPDF()" style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;padding:7px 16px;border-radius:8px;border:1px solid var(--ia-green);color:var(--ia-green);background:rgba(33,226,171,.06);cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(33,226,171,.15)'" onmouseout="this.style.background='rgba(33,226,171,.06)'">⬇ Exportar PDF</button>
+    <button id="footerPdfBtn" onclick="exportPDF()" style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;padding:7px 16px;border-radius:8px;border:1px solid var(--ia-green);color:var(--ia-green);background:rgba(33,226,171,.06);cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(33,226,171,.15)'" onmouseout="this.style.background='rgba(33,226,171,.06)'">⬇ Exportar PDF</button>
   </div>
 </div>
 </body>
