@@ -2141,11 +2141,28 @@ async function exportSimExcel(){
 }
 
 function exportSimCSV(){
-  if(!lastSimData) return;
-  const {dates}=lastSimData;
+  if(!lastSimData||!lastSimData.dates.length){ alert('No hay flujo para exportar.'); return; }
+  const {dates, invInicial, totalCobrar, neto, items}=lastSimData;
   const en=v=>round2(v).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  let csv='Fecha;Renta;Amortización;Renta + Amortización;Flujo Neto\n';
-  dates.forEach(d=>{ const ra=(d.interes||0)+(d.amort||0); csv+=`${simDateAR(d.date)};${en(d.interes)};${en(d.amort)};${en(ra)};${en(d.flujo)}\n`; });
+  const L=[];
+  L.push('INVERSIONES ANDINAS');
+  L.push('Monitor ONs Hard Dollar — Simulador de Flujo de Fondos');
+  L.push('Generado;'+new Date().toLocaleString('es-AR'));
+  L.push('');
+  L.push('Instrumento;Nominal (VN)');
+  Object.keys(items).forEach(t=>{ const d=allData.find(x=>x.tickerUSD===t); L.push('"'+(t+(d?' · '+d.nombre:''))+'";'+Number(items[t]).toLocaleString('es-AR')); });
+  L.push('');
+  L.push('Inversión inicial (USD);'+en(invInicial));
+  L.push('Total a cobrar (USD);'+en(totalCobrar));
+  L.push('Resultado neto (USD);'+en(neto));
+  L.push('');
+  L.push('Fecha;Renta;Amortización;Renta + Amortización;Flujo Neto');
+  let tR=0,tA=0,tF=0;
+  dates.forEach(d=>{ const ra=(d.interes||0)+(d.amort||0); tR+=d.interes||0; tA+=d.amort||0; tF+=d.flujo; L.push(`${simDateAR(d.date)};${en(d.interes)};${en(d.amort)};${en(ra)};${en(d.flujo)}`); });
+  L.push('TOTAL;'+en(tR)+';'+en(tA)+';'+en(tR+tA)+';'+en(tF));
+  L.push('');
+  L.push('inversionesandinas.com');
+  const csv=L.join('\n')+'\n';
   const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Flujo_de_fondos.csv'; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
@@ -2158,24 +2175,52 @@ async function exportSimPDF(){
     if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     const { jsPDF }=window.jspdf;
     if(!jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
-    const navy=[5,41,122], grey=[140,140,140];
+    const NAVY=[5,41,122], BLUE=[36,101,246], GREEN=[18,135,102], MINT=[33,226,171], RED=[233,48,48], GREY=[140,140,140], LIGHT=[247,249,255], LBLUE=[132,169,250];
     const doc=new jsPDF({orientation:'portrait', unit:'pt', format:'a4'});
-    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.setTextColor.apply(doc, navy);
-    doc.text('Simulador de Flujo de Fondos', 40, 50);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor.apply(doc, grey);
-    doc.text('Inversiones Andinas · '+new Date().toLocaleString('es-AR'), 40, 66);
+    const W=doc.internal.pageSize.getWidth(), Hp=doc.internal.pageSize.getHeight();
+    // Encabezado y pie de marca (se dibujan en cada página)
+    const brand=()=>{
+      doc.setFillColor.apply(doc,NAVY); doc.rect(0,0,W,66,'F');
+      doc.setFillColor.apply(doc,BLUE); doc.triangle(36,48, 51,23, 66,48, 'F');
+      doc.setFillColor.apply(doc,MINT); doc.triangle(54,48, 65,31, 76,48, 'F');
+      doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255);
+      doc.text('INVERSIONES ANDINAS', 88, 32);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,LBLUE);
+      doc.text('Monitor ONs Hard Dollar · Simulador de Flujo de Fondos', 88, 46);
+      doc.setDrawColor(220,228,245); doc.setLineWidth(.5); doc.line(40,Hp-30,W-40,Hp-30);
+      doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,GREY);
+      doc.text('inversionesandinas.com', 40, Hp-17);
+      doc.text('Página '+doc.internal.getCurrentPageInfo().pageNumber, W-40, Hp-17, {align:'right'});
+    };
+    brand();
+    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor.apply(doc,NAVY);
+    doc.text('Flujo de Fondos Simulado', 40, 98);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,GREY);
+    doc.text('Generado '+new Date().toLocaleString('es-AR'), 40, 112);
+    // Instrumentos
     const insRows=Object.keys(items).map(t=>{ const d=allData.find(x=>x.tickerUSD===t); return [t+(d?' · '+d.nombre:''), Number(items[t]).toLocaleString('es-AR')+' VN']; });
-    doc.autoTable({ startY:84, head:[['Instrumento','Nominal (VN)']], body:insRows, theme:'plain', styles:{fontSize:8}, headStyles:{textColor:navy, fontStyle:'bold'}, columnStyles:{1:{halign:'right'}} });
-    let y=doc.lastAutoTable.finalY+16;
-    doc.setFontSize(9); doc.setTextColor(40,40,40);
-    doc.text('Inversión inicial: '+fmtUSD(invInicial)+'     Total a cobrar: '+fmtUSD(totalCobrar)+'     Resultado neto: '+fmtUSD(neto), 40, y);
+    doc.autoTable({ startY:124, head:[['Instrumento','Nominal (VN)']], body:insRows, theme:'plain',
+      styles:{fontSize:8, cellPadding:3}, headStyles:{textColor:NAVY, fontStyle:'bold'}, columnStyles:{1:{halign:'right'}},
+      margin:{top:82,left:40,right:40} });
+    // Resumen en 3 cajas
+    let y=doc.lastAutoTable.finalY+16; const bw=(W-80-16)/3, bx=[40,40+bw+8,40+2*(bw+8)];
+    const sums=[['INVERSIÓN INICIAL',fmtUSD(invInicial),RED],['TOTAL A COBRAR',fmtUSD(totalCobrar),GREEN],['RESULTADO NETO',fmtUSD(neto),neto>=0?GREEN:RED]];
+    sums.forEach((s,i)=>{ doc.setFillColor.apply(doc,LIGHT); doc.roundedRect(bx[i],y,bw,40,4,4,'F');
+      doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor.apply(doc,GREY); doc.text(s[0],bx[i]+8,y+15);
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor.apply(doc,s[2]); doc.text(s[1],bx[i]+8,y+31); });
+    // Tabla de flujo
     const body=dates.map(d=>{ const ra=(d.interes||0)+(d.amort||0); return [simDateAR(d.date), fmtNum(d.interes||0), fmtNum(d.amort||0), fmtNum(ra), fmtNum(d.flujo)]; });
     const tR=dates.reduce((a,d)=>a+(d.interes||0),0), tA=dates.reduce((a,d)=>a+(d.amort||0),0), tF=dates.reduce((a,d)=>a+d.flujo,0);
     body.push(['TOTAL', fmtNum(tR), fmtNum(tA), fmtNum(tR+tA), fmtNum(tF)]);
-    doc.autoTable({ startY:y+10, head:[['Fecha','Renta','Amortización','Renta + Amort.','Flujo Neto']], body,
-      styles:{fontSize:8, halign:'right'}, columnStyles:{0:{halign:'left'}}, headStyles:{fillColor:navy, textColor:255},
-      didParseCell:(dt)=>{ if(dt.section==='body'&&dt.row.index===body.length-1) dt.cell.styles.fontStyle='bold'; } });
-    doc.save('Flujo_de_fondos.pdf');
+    doc.autoTable({ startY:y+54, head:[['Fecha','Renta','Amortización','Renta + Amort.','Flujo Neto']], body,
+      styles:{fontSize:8, halign:'right', cellPadding:4}, columnStyles:{0:{halign:'left'}},
+      headStyles:{fillColor:NAVY, textColor:255, fontStyle:'bold'}, alternateRowStyles:{fillColor:LIGHT},
+      margin:{top:82,left:40,right:40},
+      didParseCell:(dt)=>{ if(dt.section!=='body') return; const last=dt.row.index===body.length-1;
+        if(last) dt.cell.styles.fontStyle='bold';
+        if(dt.column.index===4){ const neg=String(dt.cell.raw).trim().charAt(0)==='-'; dt.cell.styles.textColor=neg?RED:GREEN; dt.cell.styles.fontStyle='bold'; } },
+      didDrawPage:brand });
+    doc.save('Flujo_de_fondos_IA.pdf');
   } catch(e){ alert('No se pudo generar el PDF: '+e.message); }
 }
 
