@@ -716,7 +716,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
   <div class="tabs" id="sectionTabs">
     <button class="tab sec active" data-sec="ons" onclick="setSection('ons')">ONs</button>
     <button class="tab sec" data-sec="bonos" onclick="setSection('bonos')">Bonos</button>
-    <button class="tab sec" data-sec="cal" onclick="setSection('cal')">📅 Calendario</button>
+    <button class="tab sec" data-sec="cal" onclick="setSection('cal')">🎯 Cobertura</button>
     <button class="tab sec" data-sec="agenda" onclick="setSection('agenda')">📆 Agenda</button>
     <button class="tab sec" data-sec="sim" onclick="setSection('sim')">💵 Simulador</button>
   </div>
@@ -1979,7 +1979,7 @@ async function renderCartera() {
 
   // Header
   h.push('<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">');
-  h.push('<div><div style="font-size:16px;font-weight:700;color:var(--text)">📅 Calendario de Pagos</div><div style="font-size:12px;color:var(--muted);margin-top:3px">ONs y Bonos · hacé click en un instrumento para agregarlo. ⭐ = favorita. Fechas según cronograma real.</div></div>');
+  h.push('<div><div style="font-size:16px;font-weight:700;color:var(--text)">🎯 Cobertura Cuponera</div><div style="font-size:12px;color:var(--muted);margin-top:3px">ONs y Bonos · elegí instrumentos para cubrir los 12 meses del año. ⭐ = favorita. Meses según cronograma real.</div></div>');
   if (carteraSelected.size > 0) h.push('<button id="vaciarbtn" style="font-family:Poppins,sans-serif;padding:6px 14px;border:1px solid var(--red);color:var(--red);background:none;border-radius:6px;font-size:11px;cursor:pointer;">✕ Vaciar selección</button>');
   h.push('</div>');
 
