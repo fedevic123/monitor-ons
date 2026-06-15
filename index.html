@@ -1400,6 +1400,11 @@ function renderTable(){
 
 // ─── CURVA ────────────────────────────────────────────────
 function renderCurva(){
+  const tlt=document.querySelector('.curva-title'), sub=document.querySelector('.curva-sub');
+  if(tlt) tlt.textContent = 'Curva de Rendimientos · '+(LBL_BY_SEC[currentClass]||'');
+  if(sub) sub.textContent = currentClass==='tasafija'
+    ? 'Duración (meses) vs. TNA — hover para ver detalle'
+    : 'Duración vs. '+(currentClass==='cer'?'TIR':'Tasa Interna de Retorno (TIR)')+' — hover para ver detalle';
   const canvas = document.getElementById('curvaCanvas');
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.offsetWidth || 900;
@@ -1418,10 +1423,13 @@ function renderCurva(){
   );
   if (!allPts.length) return;
 
-  // Separar distressed (TIR > 15%) del grupo principal
-  const DISTRESSED_TIR = 15;
-  const mainPts     = allPts.filter(d => d.tir <= DISTRESSED_TIR);
+  // Separar distressed (TIR > 15%) del grupo principal — solo aplica a dólar (ONs/Bonos).
+  // En pesos (tasa fija TNA ~20%+, CER) no hay banda distressed: se grafica todo.
+  const esPesos = (currentClass==='tasafija' || currentClass==='cer');
+  const DISTRESSED_TIR = esPesos ? Infinity : 15;
+  let mainPts       = allPts.filter(d => d.tir <= DISTRESSED_TIR);
   const distressed  = allPts.filter(d => d.tir >  DISTRESSED_TIR);
+  if(!mainPts.length) mainPts = allPts.slice();   // salvaguarda anti-NaN
 
   const pad = { l: 52, r: 20, t: 50, b: 44 };
   const cW  = W - pad.l - pad.r;
@@ -1499,11 +1507,13 @@ function renderCurva(){
     ctx.fillText(x % 1 === 0 ? x.toFixed(0) : x.toFixed(1), xx, H - pad.b + 16);
   }
 
-  // ── AXIS LABELS
+  // ── AXIS LABELS (según clase)
+  const xLab = currentClass==='tasafija' ? 'Duración (meses)' : currentClass==='cer' ? 'Duración Mod. (años)' : 'Duración (años)';
+  const yLab = currentClass==='tasafija' ? 'TNA (%)' : 'TIR (%)';
   ctx.fillStyle = '#6b7a99'; ctx.font = '11px "Poppins",sans-serif';
-  ctx.textAlign = 'center'; ctx.fillText('Duración (años)', W / 2, H - 4);
+  ctx.textAlign = 'center'; ctx.fillText(xLab, W / 2, H - 4);
   ctx.save(); ctx.translate(12, pad.t + cH / 2); ctx.rotate(-Math.PI / 2);
-  ctx.fillText('TIR (%)', 0, 0); ctx.restore();
+  ctx.fillText(yLab, 0, 0); ctx.restore();
 
   // ── TREND LINE (regresión lineal sobre puntos con TIR > 0)
   const trendPts = mainPts.filter(d => d.tir > 0);
