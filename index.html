@@ -759,7 +759,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
       <input type="text" id="search" placeholder="Buscar especie o ticker..." oninput="applyFilters()">
     </div>
     <div class="result-count">Mostrando <b id="count">—</b> de <b id="total">—</b> <span id="claseLbl">ONs</span></div>
-    <button onclick="exportPDF()" style="
+    <button onclick="exportSectionPDF('tabla')" style="
       font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;
       padding:7px 14px;border-radius:8px;border:1px solid var(--ia-green);
       color:var(--ia-green);background:rgba(33,226,171,0.06);
@@ -767,7 +767,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
       transition:all .15s;letter-spacing:0.03em;"
       onmouseover="this.style.background='rgba(33,226,171,0.15)'"
       onmouseout="this.style.background='rgba(33,226,171,0.06)'">
-      ⬇ Exportar PDF
+      ⬇ PDF Tabla
     </button>
   </div>
   <div class="filter-row">
@@ -863,6 +863,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 <!-- CURVA VIEW -->
 <div class="main" id="viewCurva" style="display:none">
   <div class="curva-wrap">
+    <button onclick="exportSectionPDF('curva')" class="sim-export-btn" style="position:absolute;top:16px;right:16px;z-index:5">⬇ PDF</button>
     <div class="curva-title">Curva de Rendimientos · Hard Dollar</div>
     <div class="curva-sub">Duration (años) vs. Tasa Interna de Retorno (TIR) — hover para ver detalle</div>
     <canvas id="curvaCanvas"></canvas>
@@ -1979,7 +1980,7 @@ async function renderCartera() {
   // Header
   h.push('<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">');
   h.push('<div><div style="font-size:16px;font-weight:700;color:var(--text)">🎯 Cobertura Cuponera</div><div style="font-size:12px;color:var(--muted);margin-top:3px">ONs y Bonos · elegí instrumentos para cubrir los 12 meses del año. ⭐ = favorita. Meses según cronograma real.</div></div>');
-  if (carteraSelected.size > 0) h.push('<button id="vaciarbtn" style="font-family:Poppins,sans-serif;padding:6px 14px;border:1px solid var(--red);color:var(--red);background:none;border-radius:6px;font-size:11px;cursor:pointer;">✕ Vaciar selección</button>');
+  if (carteraSelected.size > 0) h.push('<div style="display:flex;gap:8px"><button onclick="exportSectionPDF(\'cobertura\')" class="sim-export-btn">⬇ PDF</button><button id="vaciarbtn" style="font-family:Poppins,sans-serif;padding:6px 14px;border:1px solid var(--red);color:var(--red);background:none;border-radius:6px;font-size:11px;cursor:pointer;">✕ Vaciar selección</button></div>');
   h.push('</div>');
 
   // Summary (only if selection)
@@ -2420,6 +2421,102 @@ function exportSimCSV(){
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }
 
+// ─── PDF branded reutilizable (Tabla / Curva / Cobertura) ───
+async function ensureJsPDF(){
+  if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const {jsPDF}=window.jspdf;
+  if(!jsPDF.API.autoTable) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js');
+  return jsPDF;
+}
+function pdfLogo(){
+  try { const img=Array.from(document.images).find(i=>i.src.startsWith('data:image')&&i.naturalWidth>0);
+    if(img){ const sc=Math.min(1,280/img.naturalWidth), cw=Math.round(img.naturalWidth*sc), ch=Math.round(img.naturalHeight*sc);
+      const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.drawImage(img,0,0,cw,ch);
+      const id=cx.getImageData(0,0,cw,ch); const p=id.data; for(let i=0;i<p.length;i+=4){ if(p[i]<45&&p[i+1]<45&&p[i+2]<45) p[i+3]=0; }
+      cx.putImageData(id,0,0); return {url:c.toDataURL('image/png'), ratio:img.naturalWidth/img.naturalHeight}; }
+  } catch(e){} return null;
+}
+async function brandedDoc(subtitle, orientation){
+  const jsPDF=await ensureJsPDF();
+  const doc=new jsPDF({orientation:orientation||'portrait', unit:'pt', format:'a4'});
+  const W=doc.internal.pageSize.getWidth(), Hp=doc.internal.pageSize.getHeight();
+  const NAVY=[5,41,122], LBLUE=[132,169,250], GREY=[140,140,140];
+  const LOGO=pdfLogo();
+  const brand=()=>{
+    doc.setFillColor.apply(doc,NAVY); doc.rect(0,0,W,66,'F');
+    if(LOGO){ const h=26,w=h*LOGO.ratio; doc.addImage(LOGO.url,'PNG',40,17,w,h); }
+    else { doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(255,255,255); doc.text('INVERSIONES ANDINAS',40,36); }
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,LBLUE);
+    doc.text('Monitor Renta Fija Hard Dollar · '+subtitle, 40, 56);
+    doc.setDrawColor(220,228,245); doc.setLineWidth(.5); doc.line(40,Hp-30,W-40,Hp-30);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,GREY);
+    doc.text('inversionesandinas.com',40,Hp-17);
+    doc.text('Página '+doc.internal.getCurrentPageInfo().pageNumber, W-40, Hp-17, {align:'right'});
+  };
+  return {doc, W, Hp, brand, NAVY, GREY};
+}
+
+async function exportSectionPDF(which){
+  try {
+    if(which==='tabla') await exportTablaPDF();
+    else if(which==='curva') await exportCurvaPDF();
+    else if(which==='cobertura') await exportCoberturaPDF();
+  } catch(e){ alert('No se pudo generar el PDF: '+e.message); }
+}
+
+async function exportTablaPDF(){
+  const rows = (filtered && filtered.length) ? filtered : allData;
+  if(!rows.length){ alert('No hay instrumentos para exportar.'); return; }
+  const lbl = currentClass==='bonos'?'Bonos':'ONs';
+  const {doc,brand,NAVY,GREY}=await brandedDoc('Tabla · '+lbl,'landscape');
+  brand();
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor.apply(doc,NAVY); doc.text('Tabla · '+lbl,40,98);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,GREY); doc.text(rows.length+' instrumentos · '+new Date().toLocaleString('es-AR'),40,112);
+  const body=rows.map(d=>[d.nombre, d.tickerUSD, d.tirStr||(d.tir!=null?d.tir.toFixed(1)+'%':'—'), d.precio!=null?d.precio.toFixed(2):'—', d.paridad!=null?d.paridad.toFixed(1):'—', d.duration!=null?d.duration.toFixed(2):'—', d.vencimiento||'—', d.ley||'—', d.pagos||'—', d.cupon||'—']);
+  doc.autoTable({ startY:124, head:[['Especie','Ticker','TIR','Precio USD','Paridad','Duration','Vencimiento','Ley','Pagos','Cupón']], body,
+    styles:{fontSize:7,cellPadding:3}, headStyles:{fillColor:NAVY,textColor:255}, alternateRowStyles:{fillColor:[247,249,255]},
+    columnStyles:{0:{halign:'left',cellWidth:150},2:{halign:'right'},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}},
+    margin:{top:82,left:40,right:40}, didDrawPage:brand });
+  doc.save('Tabla_'+lbl+'_IA.pdf');
+}
+
+async function exportCurvaPDF(){
+  const canvas=document.getElementById('curvaCanvas');
+  if(!canvas || !canvas.width){ alert('Abrí la Curva primero.'); return; }
+  const lbl = currentClass==='bonos'?'Bonos':'ONs';
+  const {doc,W,Hp,brand,NAVY,GREY}=await brandedDoc('Curva de Rendimientos','landscape');
+  brand();
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor.apply(doc,NAVY); doc.text('Curva de Rendimientos · '+lbl,40,98);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,GREY); doc.text('Generado '+new Date().toLocaleString('es-AR'),40,112);
+  const cw=W-80, ratio=canvas.height/canvas.width, ch=Math.min(cw*ratio, Hp-170);
+  doc.setFillColor(5,17,31); doc.roundedRect(40,126,cw,ch+16,6,6,'F');   // fondo oscuro para que la curva clara contraste
+  doc.addImage(canvas.toDataURL('image/png'),'PNG',48,134,cw-16,ch);
+  doc.save('Curva_'+lbl+'_IA.pdf');
+}
+
+async function exportCoberturaPDF(){
+  const sel = allInstruments().filter(d=>carteraSelected.has(d.tickerUSD));
+  if(!sel.length){ alert('Seleccioná instrumentos en la Cobertura primero.'); return; }
+  const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const today=new Date(); today.setHours(0,0,0,0); const oneY=new Date(today.getFullYear()+1,today.getMonth(),today.getDate());
+  const byM=Array.from({length:12},()=>({tks:[], renta:0}));
+  for(const d of sel){ let rows=[]; try{ rows=await fetchBondSchedule(d.tickerUSD);}catch(e){}
+    const seen=new Set();
+    rows.forEach(r=>{ if(r.date>=today&&r.date<oneY&&(r.interes||0)>0){ const mo=r.date.getMonth(); if(!seen.has(mo)){seen.add(mo); byM[mo].tks.push(d.tickerUSD);} byM[mo].renta+=r.interes; } });
+  }
+  const activos=byM.filter(m=>m.tks.length).length;
+  const {doc,brand,NAVY,GREY}=await brandedDoc('Cobertura Cuponera','portrait');
+  brand();
+  doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.setTextColor.apply(doc,NAVY); doc.text('Cobertura Cuponera',40,98);
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor.apply(doc,GREY); doc.text(sel.length+' instrumentos · '+activos+'/12 meses con cobro · próximos 12 meses · '+new Date().toLocaleString('es-AR'),40,112);
+  const body=byM.map((m,i)=>[MES[i], m.tks.join(', ')||'—', m.renta>0?m.renta.toFixed(2)+'%':'—']);
+  doc.autoTable({ startY:124, head:[['Mes','Instrumentos que pagan','Renta (% VN)']], body,
+    styles:{fontSize:9,cellPadding:5}, headStyles:{fillColor:NAVY,textColor:255}, alternateRowStyles:{fillColor:[247,249,255]},
+    columnStyles:{1:{cellWidth:300},2:{halign:'right'}}, margin:{top:82,left:40,right:40}, didDrawPage:brand,
+    didParseCell:(dt)=>{ if(dt.section==='body'&&dt.column.index===2&&dt.cell.raw!=='—') dt.cell.styles.textColor=[18,135,102]; } });
+  doc.save('Cobertura_IA.pdf');
+}
+
 async function exportSimPDF(){
   if(!lastSimData||!lastSimData.dates.length){ alert('No hay flujo para exportar.'); return; }
   const {dates, invInicial, totalCobrar, neto, items}=lastSimData;
@@ -2647,7 +2744,6 @@ setInterval(loadSalud, 10*60*1000);
           <div style="font-family:'Roboto',sans-serif;font-size:10px;color:var(--muted);margin-top:2px;">Monitor Renta Fija Hard Dollar · inversionesandinas.com</div>
         </div>
       </div>
-      <button id="footerPdfBtn" onclick="exportPDF()" style="font-family:'Poppins',sans-serif;font-size:11px;font-weight:600;padding:7px 16px;border-radius:8px;border:1px solid var(--ia-green);color:var(--ia-green);background:rgba(33,226,171,.06);cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(33,226,171,.15)'" onmouseout="this.style.background='rgba(33,226,171,.06)'">⬇ Exportar PDF</button>
     </div>
   </div>
 </body>
