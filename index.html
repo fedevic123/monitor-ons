@@ -562,6 +562,32 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 .sim-export-btn:hover { background:rgba(33,226,171,.15); }
 @media(max-width:640px){ .sim-wrap{padding:12px 12px 60px} .sim-item{grid-template-columns:1fr 100px 30px} }
 
+/* ── CALCULADORA LECAPS ── */
+.calc-wrap { max-width:880px; margin:0 auto; padding:4px 0 60px; }
+.calc-title { font-size:17px; font-weight:700; color:var(--text); }
+.calc-intro { font-size:12px; color:var(--muted); line-height:1.5; margin:4px 0 18px; }
+.calc-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.calc-panel { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; }
+.calc-h { font-size:13px; font-weight:700; color:var(--text2); margin-bottom:14px; }
+.calc-l { display:block; font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin:12px 0 5px; }
+.calc-in { width:100%; box-sizing:border-box; font-family:'Poppins',sans-serif; font-size:14px; padding:10px 12px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); }
+.calc-in:focus { outline:none; border-color:var(--accent2); }
+select.calc-in { cursor:pointer; }
+.calc-rec { margin:14px 0 0; font-size:12px; color:var(--muted); }
+.calc-rec b { color:var(--green); font-family:'Roboto Mono',monospace; font-size:13px; }
+.calc-rec span { color:var(--muted); font-size:11px; }
+.calc-empty { font-size:12px; color:var(--muted); margin-top:14px; }
+.calc-out { margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+.calc-big { font-size:15px; color:var(--text); }
+.calc-big b { font-size:24px; font-weight:700; color:var(--green); display:block; margin-top:2px; letter-spacing:-.01em; }
+.calc-sub { font-size:12px; color:var(--muted); margin-top:6px; line-height:1.5; }
+.calc-mets { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-top:14px; }
+.calc-met { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:8px 10px; text-align:center; }
+.calc-met span { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:3px; }
+.calc-met b { font-family:'DM Mono',monospace; font-size:13px; color:var(--text); font-weight:600; }
+.calc-foot { font-size:10px; color:var(--muted); line-height:1.5; margin-top:16px; text-align:center; }
+@media(max-width:640px){ .calc-grid{grid-template-columns:1fr} }
+
 /* ── PRINT / PDF ── */
 @media print {
   * {
@@ -731,9 +757,9 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <span class="uni-group" data-uni="pesos" style="display:none">
       <button class="tab sec" data-sec="tasafija" onclick="setSection('tasafija')">Tasa Fija</button>
       <button class="tab sec" data-sec="cer" onclick="setSection('cer')">CER</button>
-      <button class="tab sec" data-sec="cal" onclick="setSection('cal')">🎯 Cobertura<sup class="beta">BETA</sup></button>
       <button class="tab sec" data-sec="agenda" onclick="setSection('agenda')">📆 Agenda<sup class="beta">BETA</sup></button>
       <button class="tab sec" data-sec="sim" onclick="setSection('sim')">💵 Simulador<sup class="beta">BETA</sup></button>
+      <button class="tab sec" data-sec="calc" onclick="setSection('calc')">🧮 Calculadora</button>
     </span>
   </div>
   <div class="tabs subtabs" id="subTabs">
@@ -869,6 +895,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 
 <!-- SIMULADOR VIEW -->
 <div id="viewSimulador" style="display:none"></div>
+<div id="viewCalc" style="display:none"></div>
 
 <!-- SALUD VIEW -->
 <div class="main" id="viewSalud" style="display:none"></div>
@@ -1687,8 +1714,9 @@ function setView(v){
   document.getElementById('viewSimulador').style.display=v==='simulador'?'block':'none';
   document.getElementById('viewSalud').style.display=v==='salud'?'block':'none';
   document.getElementById('viewAgenda').style.display=v==='agenda'?'block':'none';
-  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=v==='simulador'?'none':'';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda';
+  document.getElementById('viewCalc').style.display=v==='calc'?'block':'none';
+  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc')?'none':'';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('#subTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
@@ -1699,6 +1727,7 @@ function setView(v){
   else if(v==='nuevas') renderNuevas();
   else if(v==='cartera') renderCartera();
   else if(v==='simulador') renderSimulador();
+  else if(v==='calc') renderCalc();
   else if(v==='salud') renderSalud();
   else if(v==='agenda') renderAgenda();
   else applyFilters();
@@ -1736,6 +1765,7 @@ function setSection(s){
     if(s==='cal') setView('cartera');
     else if(s==='sim') setView('simulador');
     else if(s==='agenda') setView('agenda');
+    else if(s==='calc') setView('calc');
   }
 }
 
@@ -2465,6 +2495,99 @@ async function fetchPesosSchedule(d){
     } catch(e){ return []; }
   }
   return [];
+}
+
+// ─── CALCULADORA LECAPS (universo pesos · tasa fija) ───
+// Usa los datos ya cargados en dataTasaFija (precio por 100 VN, pagoVto, vto).
+function calcLecapResult(d, monto){
+  if(!d || d.precio==null || d.pagoVto==null || !(monto>0)) return null;
+  const nominal = monto / d.precio * 100;      // VN comprados
+  const payout  = nominal * d.pagoVto / 100;   // cobro al vencimiento
+  const gan     = payout - monto;
+  const venc    = parseFlujoDate(d.vencimiento);
+  let dias = (d.dias!=null && d.dias>0) ? Math.round(d.dias)
+           : (venc ? Math.round((venc - new Date())/86400000) : null);
+  return { nominal, payout, gan, dias, venc, rend:d.rendDirecto, tna:d.tna, tea:d.tea, tem:d.tem, precio:d.precio };
+}
+// Modo 2: dada una fecha objetivo, recomienda la Lecap óptima que vence en/antes de esa fecha.
+function calcRecomendar(target){
+  if(!target) return null;
+  const hoy=new Date(); hoy.setHours(0,0,0,0);
+  const vivas = dataTasaFija.filter(d=>{ const v=parseFlujoDate(d.vencimiento); return v && v>hoy && d.precio!=null && d.pagoVto!=null; });
+  if(!vivas.length) return null;
+  const enPlazo = vivas.filter(d=> parseFlujoDate(d.vencimiento) <= target);
+  if(enPlazo.length){   // de las que vencen a tiempo, la de mayor TEA
+    return enPlazo.sort((a,b)=>(b.tea||0)-(a.tea||0))[0];
+  }
+  // ninguna vence a tiempo → la de vencimiento más cercano posterior
+  return vivas.sort((a,b)=>parseFlujoDate(a.vencimiento)-parseFlujoDate(b.vencimiento))[0];
+}
+function calcParseMonto(v){ return parseFloat(String(v||'').replace(/[^0-9]/g,''))||0; }
+function calcFmt(v){ return '$ '+Math.round(v).toLocaleString('es-AR'); }
+function calcCardHTML(r, d){
+  if(!r) return '<div class="calc-empty">Sin datos para este instrumento.</div>';
+  const mets=[
+    ['Precio hoy', (r.precio!=null?('$ '+r.precio.toFixed(2).replace('.',',')):'—')],
+    ['Días al vto', (r.dias!=null?r.dias:'—')],
+    ['Rend. directo', (r.rend||'—')],
+    ['TNA', pp(r.tna)],
+    ['TEA', pp(r.tea)],
+    ['TEM', pp(r.tem)],
+  ];
+  return `<div class="calc-out">
+    <div class="calc-big">Vas a cobrar <b>${calcFmt(r.payout)}</b></div>
+    <div class="calc-sub">el <b>${d.vencimiento||'—'}</b> · ganás <b style="color:var(--green)">${calcFmt(r.gan)}</b> · VN ${Math.round(r.nominal).toLocaleString('es-AR')}</div>
+    <div class="calc-mets">${mets.map(m=>`<div class="calc-met"><span>${m[0]}</span><b>${m[1]}</b></div>`).join('')}</div>
+  </div>`;
+}
+function renderCalc(){
+  const el=document.getElementById('viewCalc'); if(!el) return;
+  if(!dataTasaFija.length){ el.innerHTML='<div class="state"><div class="state-spinner"></div>Cargando datos de tasa fija…</div>'; return; }
+  const opts=dataTasaFija.filter(d=>d.precio!=null&&d.pagoVto!=null)
+    .map(d=>`<option value="${d.tickerUSD}">${d.tickerUSD} · vto ${d.vencimiento||'—'}</option>`).join('');
+  el.innerHTML=`<div class="calc-wrap">
+    <div class="calc-title">🧮 Calculadora de Lecaps / Boncaps</div>
+    <div class="calc-intro">Simulá cuánto cobrás a vencimiento. Elegí un instrumento, o decinos para cuándo necesitás la plata y te recomendamos la mejor opción. Tasa fija en pesos.</div>
+    <div class="calc-grid">
+      <div class="calc-panel">
+        <div class="calc-h">📌 Tengo una Lecap en mente</div>
+        <label class="calc-l">Instrumento</label>
+        <select id="calcAct" class="calc-in" onchange="calcGo()">${opts}</select>
+        <label class="calc-l">Monto a invertir</label>
+        <input id="calcMonto" class="calc-in" inputmode="numeric" value="1.000.000" oninput="calcFmtInput(this);calcGo()">
+        <div id="calcRes1"></div>
+      </div>
+      <div class="calc-panel">
+        <div class="calc-h">📅 ¿Para cuándo necesitás la plata?</div>
+        <label class="calc-l">Fecha objetivo</label>
+        <input id="calcFecha" type="date" class="calc-in" onchange="calcGo()">
+        <label class="calc-l">Monto a invertir</label>
+        <input id="calcMonto2" class="calc-in" inputmode="numeric" value="1.000.000" oninput="calcFmtInput(this);calcGo()">
+        <div id="calcRec"></div>
+        <div id="calcRes2"></div>
+      </div>
+    </div>
+    <div class="calc-foot">Cálculo orientativo según último precio publicado (VN comprados = monto ÷ precio × 100; cobro = VN × pago al vto ÷ 100). No contempla comisiones.</div>
+  </div>`;
+  const f=new Date(Date.now()+90*86400000); document.getElementById('calcFecha').value=f.toISOString().slice(0,10);
+  calcGo();
+}
+function calcFmtInput(inp){
+  const n=calcParseMonto(inp.value); const pos=inp.selectionStart;
+  inp.value = n? n.toLocaleString('es-AR') : '';
+}
+function calcGo(){
+  const a=document.getElementById('calcAct'); if(!a) return;
+  const d1=dataTasaFija.find(x=>x.tickerUSD===a.value);
+  const m1=calcParseMonto(document.getElementById('calcMonto').value);
+  document.getElementById('calcRes1').innerHTML=calcCardHTML(calcLecapResult(d1,m1), d1||{});
+  const fv=document.getElementById('calcFecha').value;
+  const m2=calcParseMonto(document.getElementById('calcMonto2').value);
+  const rec= fv? calcRecomendar(new Date(fv+'T00:00:00')) : null;
+  document.getElementById('calcRec').innerHTML = rec
+    ? `<div class="calc-rec">Recomendada: <b>${rec.tickerUSD}</b> <span>(vto ${rec.vencimiento})</span></div>`
+    : (fv?'<div class="calc-empty">No hay Lecap disponible para esa fecha.</div>':'<div class="calc-empty">Elegí una fecha objetivo.</div>');
+  document.getElementById('calcRes2').innerHTML = rec? calcCardHTML(calcLecapResult(rec,m2), rec) : '';
 }
 
 async function fetchBondSchedule(tickerUSD){
