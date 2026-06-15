@@ -586,6 +586,10 @@ select.calc-in { cursor:pointer; }
 .calc-met span { display:block; font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:3px; }
 .calc-met b { font-family:'DM Mono',monospace; font-size:13px; color:var(--text); font-weight:600; }
 .calc-foot { font-size:10px; color:var(--muted); line-height:1.5; margin-top:16px; text-align:center; }
+.cau-tbl { width:100%; border-collapse:collapse; margin-top:4px; }
+.cau-tbl th { font-size:9px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; padding:7px 8px; border-bottom:1px solid var(--border2); text-align:left; }
+.cau-tbl td { font-family:'DM Mono',monospace; font-size:12px; color:var(--text); padding:8px; border-bottom:1px solid var(--border); }
+.cau-tbl tbody tr:hover { background:var(--surface2); }
 @media(max-width:640px){ .calc-grid{grid-template-columns:1fr} }
 
 /* ── PRINT / PDF ── */
@@ -760,6 +764,7 @@ select.calc-in { cursor:pointer; }
       <button class="tab sec" data-sec="agenda" onclick="setSection('agenda')">📆 Agenda<sup class="beta">BETA</sup></button>
       <button class="tab sec" data-sec="sim" onclick="setSection('sim')">💵 Simulador<sup class="beta">BETA</sup></button>
       <button class="tab sec" data-sec="calc" onclick="setSection('calc')">🧮 Calculadora</button>
+      <button class="tab sec" data-sec="cau" onclick="setSection('cau')">🏦 Caución</button>
     </span>
   </div>
   <div class="tabs subtabs" id="subTabs">
@@ -896,6 +901,7 @@ select.calc-in { cursor:pointer; }
 <!-- SIMULADOR VIEW -->
 <div id="viewSimulador" style="display:none"></div>
 <div id="viewCalc" style="display:none"></div>
+<div id="viewCaucion" style="display:none"></div>
 
 <!-- SALUD VIEW -->
 <div class="main" id="viewSalud" style="display:none"></div>
@@ -1715,8 +1721,9 @@ function setView(v){
   document.getElementById('viewSalud').style.display=v==='salud'?'block':'none';
   document.getElementById('viewAgenda').style.display=v==='agenda'?'block':'none';
   document.getElementById('viewCalc').style.display=v==='calc'?'block':'none';
-  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc')?'none':'';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc';
+  document.getElementById('viewCaucion').style.display=v==='caucion'?'block':'none';
+  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc'||v==='caucion')?'none':'';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc'||v==='caucion';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('#subTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
@@ -1728,6 +1735,7 @@ function setView(v){
   else if(v==='cartera') renderCartera();
   else if(v==='simulador') renderSimulador();
   else if(v==='calc') renderCalc();
+  else if(v==='caucion') renderCaucion();
   else if(v==='salud') renderSalud();
   else if(v==='agenda') renderAgenda();
   else applyFilters();
@@ -1766,6 +1774,7 @@ function setSection(s){
     else if(s==='sim') setView('simulador');
     else if(s==='agenda') setView('agenda');
     else if(s==='calc') setView('calc');
+    else if(s==='cau') setView('caucion');
   }
 }
 
@@ -2588,6 +2597,77 @@ function calcGo(){
     ? `<div class="calc-rec">Recomendada: <b>${rec.tickerUSD}</b> <span>(vto ${rec.vencimiento})</span></div>`
     : (fv?'<div class="calc-empty">No hay Lecap disponible para esa fecha.</div>':'<div class="calc-empty">Elegí una fecha objetivo.</div>');
   document.getElementById('calcRes2').innerHTML = rec? calcCardHTML(calcLecapResult(rec,m2), rec) : '';
+}
+
+// ─── CALCULADORA DE CAUCIÓN COLOCADORA (universo pesos) ───
+// Interés bruto = importe × TNA/100 × días/365.
+// Comisión + derechos ≈ importe × comAnual/100 × días/365 (default 0,66% anual; varía por broker).
+// Rendimiento directo del período = TNA/100 × días/365 (verificado vs sheet: 13% a 4d = 0,14%).
+function caucionCalc(importe, dias, tna, comAnual){
+  if(!(importe>0) || !(dias>0)) return null;
+  const bruto = importe * (tna/100) * dias/365;
+  const comision = importe * (comAnual/100) * dias/365;
+  const neto = bruto - comision;
+  const rendDir = (tna/100) * dias/365;     // tasa efectiva del período (fracción)
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const vto = new Date(hoy.getTime() + dias*86400000);
+  return { bruto, comision, neto, rendDir, obtengo: importe+neto, hoy, vto };
+}
+function caucionFmtFecha(d){ return d? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '—'; }
+function renderCaucion(){
+  const el=document.getElementById('viewCaucion'); if(!el) return;
+  el.innerHTML=`<div class="calc-wrap">
+    <div class="calc-title">🏦 Calculadora de Caución Colocadora</div>
+    <div class="calc-intro">Colocás pesos a muy corto plazo y cobrás intereses. Ingresá importe, plazo y la TNA que te ofrece el mercado; calculamos el interés neto de comisiones y cuánto vas a obtener al vencimiento.</div>
+    <div class="calc-grid">
+      <div class="calc-panel">
+        <div class="calc-h">📥 Datos de la colocación</div>
+        <label class="calc-l">Importe a colocar</label>
+        <input id="cauImporte" class="calc-in" inputmode="numeric" value="1.000.000" oninput="calcFmtInput(this);caucionGo()">
+        <label class="calc-l">Plazo en días</label>
+        <input id="cauDias" class="calc-in" type="number" min="1" step="1" value="1" oninput="caucionGo()">
+        <label class="calc-l">Tasa TNA (%)</label>
+        <input id="cauTna" class="calc-in" type="number" min="0" step="0.5" value="30" oninput="caucionGo()">
+        <label class="calc-l">Comisión + derechos (% anual) <span style="text-transform:none;letter-spacing:0;color:var(--muted)">· varía según broker</span></label>
+        <input id="cauCom" class="calc-in" type="number" min="0" step="0.01" value="0.66" oninput="caucionGo()">
+      </div>
+      <div class="calc-panel">
+        <div class="calc-h">📊 Resultado</div>
+        <div id="cauRes"></div>
+      </div>
+    </div>
+    <div class="calc-panel" style="margin-top:16px">
+      <div class="calc-h">🗓️ Proyección por plazo <span style="text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400">· mismo importe y TNA</span></div>
+      <div id="cauProj"></div>
+    </div>
+    <div class="calc-foot">Caución colocadora: prestás pesos con garantía del mercado. Interés bruto = importe × TNA × días ÷ 365. La comisión + derechos de mercado varía según el broker (default orientativo 0,66% anual). No constituye recomendación de inversión.</div>
+  </div>`;
+  caucionGo();
+}
+function caucionGo(){
+  const imp=calcParseMonto(document.getElementById('cauImporte').value);
+  const dias=parseInt(document.getElementById('cauDias').value)||0;
+  const tna=parseFloat(document.getElementById('cauTna').value)||0;
+  const com=parseFloat(document.getElementById('cauCom').value)||0;
+  const r=caucionCalc(imp,dias,tna,com);
+  const box=document.getElementById('cauRes');
+  if(!r){ box.innerHTML='<div class="calc-empty">Ingresá importe y plazo.</div>'; document.getElementById('cauProj').innerHTML=''; return; }
+  const netoColor = r.neto>=0?'var(--green)':'var(--red)';
+  box.innerHTML=`<div class="calc-out" style="border-top:none;margin-top:0;padding-top:0">
+    <div class="calc-big">Vas a obtener <b>${calcFmt(r.obtengo)}</b></div>
+    <div class="calc-sub">al vto <b>${caucionFmtFecha(r.vto)}</b> · interés neto <b style="color:${netoColor}">${calcFmt(r.neto)}</b></div>
+    <div class="calc-mets">
+      <div class="calc-met"><span>Rend. directo</span><b>${(r.rendDir*100).toFixed(3).replace('.',',')}%</b></div>
+      <div class="calc-met"><span>Interés bruto</span><b>${calcFmt(r.bruto)}</b></div>
+      <div class="calc-met"><span>Comisión + der.</span><b>${calcFmt(r.comision)}</b></div>
+      <div class="calc-met"><span>Hoy</span><b>${caucionFmtFecha(r.hoy)}</b></div>
+      <div class="calc-met"><span>Vencimiento</span><b>${caucionFmtFecha(r.vto)}</b></div>
+      <div class="calc-met"><span>Interés NETO</span><b style="color:${netoColor}">${calcFmt(r.neto)}</b></div>
+    </div>
+  </div>`;
+  const plazos=[1,7,14,30];
+  const rows=plazos.map(p=>{ const x=caucionCalc(imp,p,tna,com); return `<tr><td>${p} día${p>1?'s':''}</td><td style="text-align:right">${(x.rendDir*100).toFixed(3).replace('.',',')}%</td><td style="text-align:right">${calcFmt(x.neto)}</td><td style="text-align:right;font-weight:600">${calcFmt(x.obtengo)}</td></tr>`; }).join('');
+  document.getElementById('cauProj').innerHTML=`<table class="cau-tbl"><thead><tr><th>Plazo</th><th style="text-align:right">Rend. directo</th><th style="text-align:right">Interés neto</th><th style="text-align:right">Vas a obtener</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function fetchBondSchedule(tickerUSD){
