@@ -2017,7 +2017,7 @@ async function renderCartera() {
           : 'border:1px solid rgba(255,255,255,.08);color:var(--muted);') +
         '" title="' + (isSel ? 'Quitar: ' : 'Agregar: ') + d.nombre + (d.clase==='bono'?' (Bono)':' (ON)') + '">' +
         '<span style="display:flex;align-items:center;gap:3px;"><span style="width:5px;height:5px;border-radius:50%;flex-shrink:0;background:' + (d.clase==='bono'?'#e9cb30':'#5486f8') + '"></span>' + (isFav ? '⭐' : '') + d.tickerUSD + '</span>' +
-        '<span style="opacity:.6;font-size:8px">' + (d.tirStr || '') + '</span>' +
+        '<span style="opacity:.6;font-size:8px">' + (d.tirStr || (d.tir!=null ? d.tir.toFixed(1)+'%' : '—')) + '</span>' +
         '</div>'
       );
     });
@@ -2070,10 +2070,8 @@ async function renderCartera() {
       h.push('</div>');
     });
     h.push('</div>');
-    h.push('<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-top:1px solid var(--border);padding-top:12px;">');
+    h.push('<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;border-top:1px solid var(--border);padding-top:12px;">');
     h.push('<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">Meses activos</div><div style="font-family:DM Mono,monospace;font-size:18px;color:var(--ia-green);">'+activos+'/12</div></div>');
-    h.push('<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">Total cupones/año</div><div style="font-family:DM Mono,monospace;font-size:18px;color:var(--ia-green);">'+totAnual.toFixed(1)+'%</div></div>');
-    h.push('<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">Prom. mensual</div><div style="font-family:DM Mono,monospace;font-size:18px;color:var(--text);">'+promM.toFixed(1)+'%</div></div>');
     h.push('<div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px 12px;"><div style="font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px;">Instrumentos</div><div style="font-family:DM Mono,monospace;font-size:18px;color:var(--text);">'+selectedONs.length+'</div></div>');
     h.push('</div></div>');
   } else {
