@@ -1714,20 +1714,11 @@ async function loadFlujo(d){
   container.innerHTML='<div class="flujo-loading"><div class="flujo-spinner"></div>Cargando flujo de pagos...</div>';
   status.textContent='';
 
-  const tab=tickerToTab(d.tickerUSD);
-  if(!tab||GID_MAP[tab]===undefined){
-    container.innerHTML='<div class="flujo-err">No se encontró la pestaña para este instrumento.</div>';
-    return;
-  }
-
   try {
-    const url=`${BASE_CSV}&gid=${GID_MAP[tab]}&t=${Date.now()}`;
-    const r=await fetch(url);
-    const txt=await r.text();
-    const flujoRows=parseFlujoRows(txt);
+    const flujoRows = await fetchBondSchedule(d.tickerUSD);   // rutea ON o bono y parsea
 
     if(!flujoRows.length){
-      container.innerHTML=`<div class="flujo-err">No se encontraron filas de flujo válidas.<br><small>Pestaña: ${tab} · Filas totales: ${rows.length} · Inicio datos: fila ${dataStartIdx}</small></div>`;
+      container.innerHTML='<div class="flujo-err">No se encontró el flujo de pagos para este instrumento.</div>';
       return;
     }
 
@@ -1794,7 +1785,7 @@ async function loadFlujo(d){
     </tr></tfoot></table></div>`;
 
     container.innerHTML=html;
-    status.textContent=`${flujoRows.length} pagos · ${futuros.length} restantes · pestaña: ${tab}`;
+    status.textContent=`${flujoRows.length} pagos · ${futuros.length} restantes`;
   } catch(e) {
     container.innerHTML=`<div class="flujo-err">Error: ${e.message}</div>`;
   }
