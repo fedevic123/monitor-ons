@@ -76,6 +76,7 @@ body { background:var(--bg); color:var(--text); font-family:'Poppins',sans-serif
 .tab.active { color:var(--ia-green); border-bottom-color:var(--ia-green); }
 .tab.sec { font-size:13px; }
 .tab.uni { font-size:14px; font-weight:700; }
+.beta { font-size:7px; color:var(--gold2); vertical-align:super; margin-left:2px; font-weight:700; letter-spacing:.05em; }
 #universeTabs { border-bottom:1px solid var(--border); padding-bottom:2px; }
 .subtabs { padding-top:4px; }
 .tab.subt { font-size:11px; padding:6px 16px; text-transform:none; letter-spacing:.02em; }
@@ -730,6 +731,9 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <span class="uni-group" data-uni="pesos" style="display:none">
       <button class="tab sec" data-sec="tasafija" onclick="setSection('tasafija')">Tasa Fija</button>
       <button class="tab sec" data-sec="cer" onclick="setSection('cer')">CER</button>
+      <button class="tab sec" data-sec="cal" onclick="setSection('cal')">🎯 Cobertura<sup class="beta">BETA</sup></button>
+      <button class="tab sec" data-sec="agenda" onclick="setSection('agenda')">📆 Agenda<sup class="beta">BETA</sup></button>
+      <button class="tab sec" data-sec="sim" onclick="setSection('sim')">💵 Simulador<sup class="beta">BETA</sup></button>
     </span>
   </div>
   <div class="tabs subtabs" id="subTabs">
@@ -964,6 +968,11 @@ const GID_TF_MONITOR = 1304221267;
 const SHEET_ID_PUB_CER = '2PACX-1vSxnk6K9NzC_pt9EMfbcvsIZ8qVcTaJdjbc8OjirXu4-SfCIhd0fmsydF2m_25Pct91Zsa065GmN0r5';
 const BASE_CSV_CER = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PUB_CER}/pub?single=true&output=csv`;
 const GID_CER_CURVA = 1301618141;
+// CER con pestaña de cronograma (cupón/amortización). Los cero-cupón TZX*/X* no tienen pestaña.
+const GID_MAP_CER = {
+  'TX26':1762834394,'TX28':1055244239,'TX31':1530246643,
+  'DICP':2146701890,'DIP0':2029444698,'PARP':1839918321,'PAP0':277942552,'CUAP':18471020
+};
 
 // ticker del CSV → nombre de pestaña
 // El ticker del CSV termina en D (USD). La pestaña es los primeros 4 chars del ticker sin la D final
@@ -991,7 +1000,11 @@ let currentView='cards';
 let currentON = null;
 // universo combinado (para Calendario y Simulador)
 function allInstruments(){ return dataONs.concat(dataBonos); }
-function findInstrument(tk){ return allInstruments().find(d=>d.tickerUSD===tk); }
+// Universo activo para las herramientas (Cobertura/Agenda/Simulador)
+function tInsts(){ return currentUniverse==='pesos' ? dataTasaFija.concat(dataCER) : allInstruments(); }
+function tFetch(d){ return currentUniverse==='pesos' ? fetchPesosSchedule(d) : fetchBondSchedule(d.tickerUSD); }
+function tCur(v){ if(v==null||isNaN(v)) return '—'; const s=v<0?'-':''; return currentUniverse==='pesos' ? s+'$ '+fmtNum(Math.abs(v)) : s+'US$ '+fmtNum(Math.abs(v)); }
+function findInstrument(tk){ return tInsts().find(d=>d.tickerUSD===tk); }
 
 // ─── FETCH MONITOR ────────────────────────────────────────
 async function loadMonitor() {
@@ -1349,10 +1362,8 @@ function tableCols(cls){
   if(cls==='tasafija') return [STAR,
     {h:'Activo',thStyle:'text-align:left;min-width:90px',sort:'nombre',td:d=>`<td class="nm" style="text-align:left">${d.nombre}</td>`},
     {h:'Precio',sort:'precio',td:d=>`<td style="text-align:right">${fmtARS(d.precio)}</td>`},
-    {h:'Ajuste mens.',td:d=>`<td style="text-align:right">${d.ajusteMensual||'—'}</td>`},
     {h:'Vencimiento',sort:'vencimiento',td:d=>`<td>${d.vencimiento||'—'}</td>`},
-    {h:'Días',td:d=>`<td style="text-align:right">${d.dias!=null?Math.round(d.dias):'—'}</td>`},
-    {h:'Dur (m)',sort:'duration',td:d=>`<td style="text-align:right">${d.duration!=null?d.duration.toFixed(2).replace('.',','):'—'}</td>`},
+    {h:'Días',sort:'duration',td:d=>`<td style="text-align:right">${d.dias!=null?Math.round(d.dias):'—'}</td>`},
     {h:'TNA',sort:'tir',td:d=>tdPctN(d.tna)},
     {h:'TEA',td:d=>tdPctN(d.tea)},
     {h:'TEM',td:d=>tdPctC(d.tem)},
@@ -1696,6 +1707,8 @@ function setView(v){
 // ─── SECCIÓN (clase de instrumento / vistas combinadas) ───
 function setUniverse(u){
   currentUniverse=u;
+  simItems = simStore[u];                 // herramientas: simulador por universo
+  agendaMap=null; agendaLoaded=false; agendaBuilding=false;   // agenda se recalcula por universo
   document.querySelectorAll('#universeTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.uni===u));
   document.querySelectorAll('#sectionTabs .uni-group').forEach(g=>g.style.display = (g.dataset.uni===u)?'contents':'none');
   setSection(u==='pesos' ? 'tasafija' : 'ons');
@@ -2031,18 +2044,19 @@ async function renderCartera() {
   if (!wrap) return;
   wrap.innerHTML = '<div class="flujo-loading"><div class="flujo-spinner"></div>Cargando calendario de pagos…</div>';
 
-  const selectedONs = allInstruments().filter(d => carteraSelected.has(d.tickerUSD));
+  const UNIV = tInsts();
+  const selectedONs = UNIV.filter(d => carteraSelected.has(d.tickerUSD));
 
-  // Mostrar todos los instrumentos (ONs con venc+pagos; bonos siempre, usan cronograma real)
-  const sortedAll = allInstruments().filter(d => d.clase==='bono' || (d.vencimiento && d.pagos))
+  // Mostrar instrumentos del universo activo (dólar: ONs+bonos; pesos: tasa fija + CER con cronograma)
+  const sortedAll = UNIV.filter(d => d.clase==='bono' || d.clase==='cer' || d.clase==='tasafija' || (d.vencimiento && d.pagos))
     .slice().sort((a,b) => (b.tir||0)-(a.tir||0));
 
-  // Prefetch cronogramas reales: todos los bonos (meses de pago reales) + seleccionados (flujo real)
+  // Prefetch cronogramas reales: bonos/pesos (meses reales) + seleccionados (flujo real)
   const schedMap = {};
-  const toFetch = new Set();
-  dataBonos.forEach(d => toFetch.add(d.tickerUSD));
-  selectedONs.forEach(d => toFetch.add(d.tickerUSD));
-  await Promise.all([...toFetch].map(async t => { schedMap[t] = await fetchBondSchedule(t); }));
+  const need = new Set();
+  (currentUniverse==='pesos' ? UNIV : dataBonos).forEach(d => need.add(d));
+  selectedONs.forEach(d => need.add(d));
+  await Promise.all([...need].map(async d => { schedMap[d.tickerUSD] = await tFetch(d); }));
 
   const TODAY = new Date(); TODAY.setHours(0,0,0,0);
   const ONE_YEAR = new Date(TODAY.getFullYear()+1, TODAY.getMonth(), TODAY.getDate());
@@ -2261,16 +2275,19 @@ function exportCurrentView() {
 }
 
 // ═══ SIMULADOR DE FLUJO DE FONDOS ═══════════════════════════
-let simItems = {};
-try { simItems = JSON.parse(localStorage.getItem('ia_simulador') || '{}'); } catch(e) { simItems = {}; }
-const flujoCache = {};   // tab -> filas parseadas (por 100 VN)
+function simLoad(k){ try { return JSON.parse(localStorage.getItem(k)||'{}'); } catch(e){ return {}; } }
+const simStore = { dolar: simLoad('ia_sim_dolar'), pesos: simLoad('ia_sim_pesos') };
+let simItems = simStore.dolar;   // se intercambia en setUniverse según el universo
+const flujoCache = {};   // tab -> filas parseadas
 
-function simSave(){ try { localStorage.setItem('ia_simulador', JSON.stringify(simItems)); } catch(e){} }
-function fmtUSD(v){ if(v==null||isNaN(v)) return '—'; const s=v<0?'-':''; return s+'US$ '+fmtNum(Math.abs(v)); }
+function simSave(){ try { localStorage.setItem('ia_sim_'+currentUniverse, JSON.stringify(simItems)); } catch(e){} }
+function fmtUSD(v){ if(v==null||isNaN(v)) return '—'; const s=v<0?'-':''; const sym=(currentUniverse==='pesos')?'$ ':'US$ '; return s+sym+fmtNum(Math.abs(v)); }
 function fmtNum0(v){ if(v==null||isNaN(v)) return ''; return Math.round(v).toLocaleString('es-AR'); }
-function claseTag(c){ return c==='bono'
-  ? '<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(233,203,48,.15);color:#e9cb30;border:1px solid rgba(233,203,48,.3);letter-spacing:.04em;">BONO</span>'
-  : '<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(36,101,246,.15);color:#5486f8;border:1px solid rgba(36,101,246,.3);letter-spacing:.04em;">ON</span>'; }
+function claseTag(c){
+  const m={bono:['BONO','233,203,48'], tasafija:['T.FIJA','134,203,252'], cer:['CER','185,140,255'], on:['ON','36,101,246']};
+  const [lbl,rgb]=m[c]||m.on;
+  return `<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(${rgb},.15);color:rgb(${rgb});border:1px solid rgba(${rgb},.35);letter-spacing:.04em;">${lbl}</span>`;
+}
 
 function simAdd(ticker){ if(!ticker) return; if(simItems[ticker]===undefined) simItems[ticker]=1000; simSave(); renderSimulador(); }
 function simAddFromSearch(t){ simAdd(t); }
@@ -2404,6 +2421,52 @@ function parseSalud(txt){
   return data;
 }
 
+// ─── CRONOGRAMAS PESOS (Tasa Fija sintético + CER pestaña) ───
+function parseCERSchedule(txt){
+  const rows=parseCSVRows(txt);
+  let liqStr='';
+  for(const row of rows){ if(row.join(',').toLowerCase().includes('liquida')){ for(const cell of row){ if(isDateString(cl(cell))){ liqStr=cl(cell); break; } } if(liqStr) break; } }
+  let hi=-1;
+  for(let i=0;i<rows.length;i++){ const j=rows[i].join(',').toLowerCase(); if(j.includes('fecha de pago')&&(j.includes('cash flow')||j.includes('flujo'))){ hi=i; break; } }
+  if(hi<0) return [];
+  const hdr=rows[hi].map(c=>cl(c).toLowerCase());
+  const find=p=>{ for(let k=0;k<hdr.length;k++) if(p(hdr[k])) return k; return -1; };
+  const iFecha=find(h=>h.includes('fecha')&&h.includes('pago'));
+  const iRenta=find(h=>h==='renta'||h.includes('renta'));
+  const iAmort=find(h=>h.includes('amortiz'));
+  const iFlujo=find(h=>h.includes('cash flow')||h==='flujo de fondos'||h.includes('flujo'));
+  if(iFlujo<0) return [];
+  const out=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const c=rows[i]; const g=n=>(n>=0&&n<c.length)?cl(c[n]):'';
+    let fecha=g(iFecha);
+    const flujo=numAR(g(iFlujo)), interes=numAR(g(iRenta)), principal=numAR(g(iAmort));
+    if(!isDateString(fecha)){ if(flujo!==null&&flujo!==0&&liqStr) fecha=liqStr; else continue; }
+    if(flujo===null&&interes===null&&principal===null) continue;
+    out.push({fecha, principal, interes, flujo});
+  }
+  return out;
+}
+
+async function fetchPesosSchedule(d){
+  if(d.clase==='tasafija'){
+    const out=[]; const vto=parseFlujoDate(d.vencimiento);
+    if(d.precio!=null) out.push({fecha:'hoy', date:new Date(), flujo:-d.precio, interes:0, principal:0});
+    if(vto && d.pagoVto!=null) out.push({fecha:d.vencimiento, date:vto, flujo:d.pagoVto, interes:Math.max(0,d.pagoVto-100), principal:100});
+    return out;
+  }
+  if(d.clase==='cer'){
+    const gid=GID_MAP_CER[d.tickerUSD]; if(gid===undefined) return [];   // cero-cupón sin pestaña → fuera del BETA
+    const ck='CER_'+d.tickerUSD; if(flujoCache[ck]) return flujoCache[ck];
+    try {
+      const r=await fetch(`${BASE_CSV_CER}&gid=${gid}&t=${Date.now()}`);
+      const rows=parseCERSchedule(await r.text()).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
+      flujoCache[ck]=rows; return rows;
+    } catch(e){ return []; }
+  }
+  return [];
+}
+
 async function fetchBondSchedule(tickerUSD){
   // Bono soberano (cronograma con layout propio)
   if(GID_MAP_BONOS[tickerUSD]!==undefined){
@@ -2433,7 +2496,7 @@ async function fetchBondSchedule(tickerUSD){
 // Consolida el flujo de fondos de todos los instrumentos cargados (escala por nominal/100).
 async function computeConsolidado(){
   const tickers=Object.keys(simItems);
-  const results=await Promise.all(tickers.map(async t=>({ticker:t, nominal:simItems[t], rows:await fetchBondSchedule(t)})));
+  const results=await Promise.all(tickers.map(async t=>{ const d=findInstrument(t); return {ticker:t, nominal:simItems[t], rows: d? await tFetch(d) : []}; }));
   const byDate={};   // 'yyyy-mm-dd' -> {date, interes, amort, flujo}
   let invInicial=0, totalCobrar=0; const errores=[];
   results.forEach(({ticker, nominal, rows})=>{
@@ -2461,7 +2524,7 @@ function renderSimulador(){
   const tickers=Object.keys(simItems);
   let h='<div class="sim-wrap">';
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">';
-  h+='<div><div style="font-size:16px;font-weight:700;color:var(--text)">💵 Simulador de Flujo de Fondos</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Cargá un nominal (VN) por instrumento y se arma el flujo consolidado. Valores en USD por VN.</div></div>';
+  h+='<div><div style="font-size:16px;font-weight:700;color:var(--text)">💵 Simulador de Flujo de Fondos'+(currentUniverse==='pesos'?' <span class="beta">BETA</span>':'')+'</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Cargá un nominal (VN) por instrumento y se arma el flujo consolidado. Valores en '+(currentUniverse==='pesos'?'ARS':'USD')+' por VN.'+(currentUniverse==='pesos'?' Pesos: flujos CER ajustados por inflación proyectada del Sheet; cero-cupón CER aún no incluidos.':'')+'</div></div>';
   if(tickers.length) h+='<button onclick="simClear()" style="font-family:Poppins,sans-serif;padding:6px 14px;border:1px solid var(--red);color:var(--red);background:none;border-radius:6px;font-size:11px;cursor:pointer;">✕ Vaciar</button>';
   h+='</div>';
   // Panel de carga
@@ -2490,7 +2553,7 @@ function simRenderSearch(q){
   const box=document.getElementById('simResults'); if(!box) return;
   q=(q||'').trim().toLowerCase();
   if(!q){ box.innerHTML=''; box.style.display='none'; return; }
-  const matches=allInstruments().filter(d=>(d.tickerUSD||'').toLowerCase().includes(q)||(d.nombre||'').toLowerCase().includes(q)).slice(0,8);
+  const matches=tInsts().filter(d=>(d.tickerUSD||'').toLowerCase().includes(q)||(d.nombre||'').toLowerCase().includes(q)).slice(0,8);
   if(!matches.length){ box.innerHTML='<div class="sim-res-empty">Sin resultados</div>'; box.style.display='block'; return; }
   box.innerHTML=matches.map(d=>{
     const has=simItems[d.tickerUSD]!==undefined;
@@ -2655,12 +2718,12 @@ async function exportCurvaPDF(){
 }
 
 async function exportCoberturaPDF(){
-  const sel = allInstruments().filter(d=>carteraSelected.has(d.tickerUSD));
+  const sel = tInsts().filter(d=>carteraSelected.has(d.tickerUSD));
   if(!sel.length){ alert('Seleccioná instrumentos en la Cobertura primero.'); return; }
   const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const today=new Date(); today.setHours(0,0,0,0); const oneY=new Date(today.getFullYear()+1,today.getMonth(),today.getDate());
   const byM=Array.from({length:12},()=>({tks:[], renta:0}));
-  for(const d of sel){ let rows=[]; try{ rows=await fetchBondSchedule(d.tickerUSD);}catch(e){}
+  for(const d of sel){ let rows=[]; try{ rows=await tFetch(d);}catch(e){}
     const seen=new Set();
     rows.forEach(r=>{ if(r.date>=today&&r.date<oneY&&(r.interes||0)>0){ const mo=r.date.getMonth(); if(!seen.has(mo)){seen.add(mo); byM[mo].tks.push(d.tickerUSD);} byM[mo].renta+=r.interes; } });
   }
@@ -2758,12 +2821,12 @@ function simChartHTML(dates){
       `<div class="sim-bar-track"><div class="sim-bar pos" style="height:${pct}%"></div></div>`+
       `<div class="sim-bar-lbl">${lbl}</div></div>`;
   });
-  return `<div class="sim-chart-wrap"><div class="cal-title" style="margin-bottom:10px">Cobros por mes · renta + amortización (USD)</div><div class="sim-chart">${bars}</div></div>`;
+  return `<div class="sim-chart-wrap"><div class="cal-title" style="margin-bottom:10px">Cobros por mes · renta + amortización (${currentUniverse==='pesos'?'ARS':'USD'})</div><div class="sim-chart">${bars}</div></div>`;
 }
 
 function simTableHTML(dates){
   if(!dates.length) return '<div style="color:var(--muted);font-size:12px">Sin pagos en el cronograma.</div>';
-  let h='<div class="cal-title" style="margin:6px 0 8px">Detalle por fecha (USD)</div>';
+  let h='<div class="cal-title" style="margin:6px 0 8px">Detalle por fecha ('+(currentUniverse==='pesos'?'ARS':'USD')+')</div>';
   h+='<div class="flujo-tbl-wrap"><table class="flujo-tbl"><thead><tr><th style="text-align:left">Fecha</th><th>Renta</th><th>Amortización</th><th>Renta + Amortización</th><th>Flujo Neto</th></tr></thead><tbody>';
   const today=new Date(); today.setHours(0,0,0,0);
   let tR=0,tA=0,tF=0;
@@ -2841,10 +2904,10 @@ async function renderAgenda(){
   if(!agendaRef){ const t=new Date(); agendaRef=new Date(t.getFullYear(), t.getMonth(), 1); }
   if(agendaMap){ drawAgenda(); if(agendaLoaded||agendaBuilding) return; }
   agendaBuilding = true; agendaMap = agendaMap || {}; drawAgenda();
-  const insts = allInstruments(); const today = new Date(); today.setHours(0,0,0,0);
+  const insts = tInsts(); const today = new Date(); today.setHours(0,0,0,0);
   let done = 0;
   await Promise.all(insts.map(async d => {
-    let rows=[]; try { rows = await fetchBondSchedule(d.tickerUSD); } catch(e){}
+    let rows=[]; try { rows = await tFetch(d); } catch(e){}
     rows.forEach(r => { if (r.flujo>0 && r.date>=today){ const k=r.date.toISOString().slice(0,10); (agendaMap[k]=agendaMap[k]||[]).push({tk:d.tickerUSD, clase:d.clase, flujo:r.flujo, renta:r.interes, amort:r.principal, nombre:d.nombre}); } });
     if(++done % 8 === 0) drawAgenda();
   }));
