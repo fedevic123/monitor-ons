@@ -2006,7 +2006,7 @@ async function renderCartera() {
     h.push('<div class="cal-month-header" style="display:flex;justify-content:space-between;align-items:center"><span>' + MES[m.m] + '</span>' + (hasSel ? '<span style="font-size:9px;opacity:.7">' + m.sel.length + '</span>' : '') + '</div>');
     h.push('<div class="cal-month-body" style="max-height:200px;overflow-y:auto">');
 
-    m.all.forEach(d => {
+    m.all.slice().sort((a,b)=>(carteraSelected.has(a.tickerUSD)?0:1)-(carteraSelected.has(b.tickerUSD)?0:1)).forEach(d => {
       const isSel = carteraSelected.has(d.tickerUSD);
       const isFav = favorites.has(d.tickerUSD);
       const cc = tirColor(d.tir);
