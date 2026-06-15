@@ -1036,12 +1036,20 @@ function parseBonoSchedule(txt) {
   let hi = -1;
   for (let i=0;i<rows.length;i++){ const j=splitCSV(rows[i]).join(',').toLowerCase(); if(j.includes('flujo de fondos')&&(j.includes('amortiz')||j.includes('renta'))){ hi=i; break; } }
   if (hi<0) return [];
+  // Detectar columnas por encabezado (el offset varía entre bonos: GD30 vs AO27 difieren)
+  const hdr = splitCSV(rows[hi]).map(c=>cl(c).toLowerCase());
+  const find = pred => { for(let k=0;k<hdr.length;k++) if(pred(hdr[k])) return k; return -1; };
+  let iFecha = find(h=>h.includes('fecha')&&h.includes('te')); if(iFecha<0) iFecha=find(h=>h.includes('fecha'));
+  const iAmort = find(h=>h.includes('amortiz'));
+  const iRenta = find(h=>h==='renta' || (h.includes('renta')&&!h.includes('ías')&&!h.includes('ias')));
+  const iFlujo = find(h=>h.includes('flujo de fondos'));
+  if (iFlujo<0) return [];
   const out = [];
   for (let i=hi+1;i<rows.length;i++){
     const c = splitCSV(rows[i]);
-    const g = n => cl(c[n]||'');
-    let fecha = g(4);
-    const flujo = parseNum(g(10)), interes = parseNum(g(8)), principal = parseNum(g(7));
+    const g = n => (n>=0 && n<c.length) ? cl(c[n]) : '';
+    let fecha = g(iFecha);
+    const flujo = parseNum(g(iFlujo)), interes = parseNum(g(iRenta)), principal = parseNum(g(iAmort));
     if (!isDateString(fecha)) { if (flujo!==null && flujo!==0 && liqStr) fecha = liqStr; else continue; } // fila de compra
     if (flujo===null && interes===null && principal===null) continue;
     out.push({ fecha, principal, interes, flujo });
