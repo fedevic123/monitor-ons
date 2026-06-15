@@ -78,6 +78,29 @@ body { background:var(--bg); color:var(--text); font-family:'Poppins',sans-serif
 .subtabs { padding-top:4px; }
 .tab.subt { font-size:11px; padding:6px 16px; text-transform:none; letter-spacing:.02em; }
 .tab.subt.active { color:var(--accent); border-bottom-color:var(--accent); }
+/* ── SALUD ── */
+.sal-wrap { max-width:1280px; margin:0 auto; padding:4px 0 40px; }
+.sal-tbl { width:100%; border-collapse:collapse; font-size:11px; }
+.sal-tbl th { font-family:'Roboto Mono','DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:.06em; text-transform:uppercase; text-align:right; padding:8px 10px; border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface); }
+.sal-tbl td { padding:7px 10px; text-align:right; border-bottom:1px solid var(--border); color:var(--text); }
+.sal-tbl tbody tr:hover { background:var(--surface2); }
+/* ── AGENDA ── */
+.ag-wrap { max-width:1280px; margin:0 auto; padding:4px 0 40px; }
+.ag-nav { background:var(--surface2); border:1px solid var(--border); color:var(--text2); width:30px; height:30px; border-radius:7px; cursor:pointer; font-size:13px; }
+.ag-nav:hover { border-color:var(--accent); color:var(--accent); }
+.ag-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.ag-head { margin-bottom:6px; }
+.ag-dow { font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); text-align:center; padding:4px; }
+.ag-cell { background:var(--surface); border:1px solid var(--border); border-radius:8px; min-height:98px; max-height:190px; overflow-y:auto; padding:6px; }
+.ag-cell.ag-out { opacity:.3; }
+.ag-cell.ag-has { border-color:var(--border2); }
+.ag-cell.ag-today { border-color:var(--ia-green); box-shadow:inset 0 0 0 1px var(--ia-green); }
+.ag-day { font-family:'DM Mono',monospace; font-size:11px; font-weight:700; color:var(--text2); margin-bottom:5px; }
+.ag-pay { display:flex; align-items:center; gap:3px; font-family:'DM Mono',monospace; font-size:8.5px; margin-bottom:2px; white-space:nowrap; }
+.ag-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; display:inline-block; }
+.ag-tk { color:var(--text); }
+.ag-amt { color:var(--ia-green); margin-left:auto; }
+@media(max-width:760px){ .ag-grid{gap:3px} .ag-cell{min-height:64px;padding:3px} .ag-pay{font-size:7px} .ag-dow{font-size:8px} }
 
 /* ── STATS BAR ── */
 .stats-bar { background:var(--ia-primary); border-bottom:1px solid rgba(132,169,250,0.2); }
@@ -694,6 +717,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <button class="tab sec active" data-sec="ons" onclick="setSection('ons')">ONs</button>
     <button class="tab sec" data-sec="bonos" onclick="setSection('bonos')">Bonos</button>
     <button class="tab sec" data-sec="cal" onclick="setSection('cal')">📅 Calendario</button>
+    <button class="tab sec" data-sec="agenda" onclick="setSection('agenda')">📆 Agenda</button>
     <button class="tab sec" data-sec="sim" onclick="setSection('sim')">💵 Simulador</button>
   </div>
   <div class="tabs subtabs" id="subTabs">
@@ -701,6 +725,7 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
     <button class="tab subt" data-view="table" onclick="setView('table')">Tabla</button>
     <button class="tab subt" data-view="curva" onclick="setView('curva')">Curva TIR</button>
     <button class="tab subt" data-view="favoritas" onclick="setView('favoritas')">⭐ Favoritas</button>
+    <button class="tab subt" id="subtabSalud" data-view="salud" onclick="setView('salud')">🩺 Salud</button>
   </div>
 </div>
 
@@ -829,6 +854,12 @@ td.nm { font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; max-w
 <!-- SIMULADOR VIEW -->
 <div id="viewSimulador" style="display:none"></div>
 
+<!-- SALUD VIEW -->
+<div class="main" id="viewSalud" style="display:none"></div>
+
+<!-- AGENDA VIEW -->
+<div id="viewAgenda" style="display:none"></div>
+
 <!-- CURVA VIEW -->
 <div class="main" id="viewCurva" style="display:none">
   <div class="curva-wrap">
@@ -909,6 +940,10 @@ const GID_MAP_BONOS = {
   'BPA8D':1103013653,'BPB8D':1248236521,'BPY6D':1515426742
 };
 
+// ─── SALUD CREDITICIA DE ONs (Monitor de Empresas) ───
+const SHEET_ID_PUB_SALUD = '2PACX-1vTbhpy7ztxhQkOq8pRaYC1V86VnLkJeEt2CxMe5f-TNgi5tdFY8gqS6Tlg4ht_hWA';
+const BASE_CSV_SALUD = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PUB_SALUD}/pub?single=true&output=csv`;
+
 // ticker del CSV → nombre de pestaña
 // El ticker del CSV termina en D (USD). La pestaña es los primeros 4 chars del ticker sin la D final
 function tickerToTab(tickerUSD) {
@@ -925,6 +960,7 @@ function tickerToTab(tickerUSD) {
 // ─── STATE ────────────────────────────────────────────────
 let allData = [], filtered = [];
 let dataONs = [], dataBonos = [];   // datasets por clase
+let dataSalud = [];                 // salud crediticia de emisores de ONs
 let currentClass = 'ons';           // 'ons' | 'bonos' (sección activa de instrumentos)
 let leyF='all', tirF='all', pagoF=null;
 let sortK='tir', sortAsc=true;
@@ -1541,8 +1577,10 @@ function setView(v){
   document.getElementById('viewNuevas').style.display=v==='nuevas'?'block':'none';
   document.getElementById('viewCartera').style.display=v==='cartera'?'block':'none';
   document.getElementById('viewSimulador').style.display=v==='simulador'?'block':'none';
+  document.getElementById('viewSalud').style.display=v==='salud'?'block':'none';
+  document.getElementById('viewAgenda').style.display=v==='agenda'?'block':'none';
   const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=v==='simulador'?'none':'';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('#subTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
@@ -1553,6 +1591,8 @@ function setView(v){
   else if(v==='nuevas') renderNuevas();
   else if(v==='cartera') renderCartera();
   else if(v==='simulador') renderSimulador();
+  else if(v==='salud') renderSalud();
+  else if(v==='agenda') renderAgenda();
   else applyFilters();
 }
 
@@ -1566,13 +1606,16 @@ function setSection(s){
     filtered = allData;
     const lbl=document.getElementById('claseLbl'); if(lbl) lbl.textContent = (s==='bonos')?'Bonos':'ONs';
     if(subTabs) subTabs.style.display='flex';
+    const stS=document.getElementById('subtabSalud'); if(stS) stS.style.display = (s==='ons')?'':'none';   // Salud solo para ONs
     updateStats();
-    const v = ['cards','table','curva','favoritas'].includes(currentView) ? currentView : 'cards';
+    const allowed = (s==='ons') ? ['cards','table','curva','favoritas','salud'] : ['cards','table','curva','favoritas'];
+    const v = allowed.includes(currentView) ? currentView : 'cards';
     setView(v);
   } else {
     if(subTabs) subTabs.style.display='none';
     if(s==='cal') setView('cartera');
     else if(s==='sim') setView('simulador');
+    else if(s==='agenda') setView('agenda');
   }
 }
 
@@ -2143,6 +2186,66 @@ function simSetNominal(ticker, val){
 }
 
 // Trae y cachea el cronograma (por 100 VN) de un bono. Devuelve [] si no hay/falla.
+// ─── FETCH SALUD CREDITICIA ───
+async function loadSalud(){
+  try {
+    const r = await fetch(BASE_CSV_SALUD + '&t=' + Date.now());
+    const txt = await r.text();
+    dataSalud = parseSalud(txt);
+    if (currentClass === 'ons' && currentView === 'salud') renderSalud();
+  } catch(e){ /* silencioso */ }
+}
+
+// Convierte "2,5" -> 2.5 ; "(1,94)" -> -1.94 ; "" -> null
+function parseRatio(v){
+  v = cl(v); if(!v || v==='-' || v==='—') return null;
+  let neg = /^\(.*\)$/.test(v); v = v.replace(/[()]/g,'').replace(/\./g,'').replace(',','.');
+  const n = parseFloat(v.replace(/[^0-9.\-]/g,''));
+  return isNaN(n) ? null : (neg ? -n : n);
+}
+
+// CSV → filas, respetando comillas y saltos de línea dentro de celdas
+function parseCSVRows(txt){
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<txt.length;i++){ const ch=txt[i];
+    if(inQ){
+      if(ch==='"'){ if(txt[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=ch;
+    } else if(ch==='"') inQ=true;
+    else if(ch===','){ row.push(cur); cur=''; }
+    else if(ch==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if(ch!=='\r') cur+=ch;
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function parseSalud(txt){
+  const rows = parseCSVRows(txt);
+  const data = [];
+  let hi = -1;
+  for (let i=0;i<rows.length;i++){ const j=rows[i].join(',').toLowerCase(); if(j.includes('empresa')&&j.includes('ebitda')){ hi=i; break; } }
+  if (hi<0) return [];
+  let clasi='', perfil='';
+  for (let i=hi+1;i<rows.length;i++){
+    const c = rows[i];
+    const cla = cl(c[1]); if(cla) clasi = cla;
+    if (cla.toUpperCase().includes('GLOSARIO')) break;
+    const per = cl(c[2]); if(per) perfil = per.replace(/\s+/g,' ').trim();
+    const empresa = cl(c[3]); if(!empresa) continue;
+    const titulos = cl(c[11]).split(/[\/,]/).map(t=>t.trim().replace(/[^A-Z0-9]/gi,'')).filter(t=>/^[A-Z]{2,5}\d?[DO]?$/i.test(t));
+    data.push({
+      clasificacion: clasi, perfil,
+      empresa, sector: cl(c[4]).replace(/\s+/g,' ').trim(),
+      rating: cl(c[5]),
+      deudaEbitda: parseRatio(c[6]), deudaNetaEbitda: parseRatio(c[7]),
+      ebitdaInt: parseRatio(c[8]), deudaActivos: parseRatio(c[9]), deudaIngresos: parseRatio(c[10]),
+      titulos
+    });
+  }
+  return data;
+}
+
 async function fetchBondSchedule(tickerUSD){
   // Bono soberano (cronograma con layout propio)
   if(GID_MAP_BONOS[tickerUSD]!==undefined){
@@ -2424,11 +2527,117 @@ function simTableHTML(dates){
   return h;
 }
 
+// ─── SALUD CREDITICIA · render ───
+function ratingColor(r){
+  r=(r||'').toUpperCase().trim();
+  if(r.startsWith('AAA')||r.startsWith('AA')) return 'var(--ia-green)';
+  if(r.startsWith('A')) return '#53C882';
+  if(r.startsWith('BBB')) return '#e9cb30';
+  if(r.startsWith('BB')||r.startsWith('B')) return '#f0a030';
+  if(r.startsWith('C')||r.startsWith('D')) return 'var(--red)';
+  return 'var(--muted)';
+}
+function salRatio(v, good, bad, higherBetter){
+  if(v==null) return '<td style="text-align:right;color:var(--muted);font-family:DM Mono,monospace">—</td>';
+  let col;
+  if(higherBetter) col = v>=good?'var(--ia-green)':(v>=bad?'#e9cb30':'var(--red)');
+  else col = v<=good?'var(--ia-green)':(v<=bad?'#e9cb30':'var(--red)');
+  return '<td style="text-align:right;color:'+col+';font-family:DM Mono,monospace">'+v.toFixed(2).replace('.',',')+'</td>';
+}
+function renderSalud(){
+  const el=document.getElementById('viewSalud'); if(!el) return;
+  if(!dataSalud.length){ el.innerHTML='<div class="state"><div class="state-spinner"></div>Cargando salud crediticia…</div>'; return; }
+  let h='<div class="sal-wrap">';
+  h+='<div style="font-size:16px;font-weight:700;color:var(--text)">🩺 Salud Crediticia de Emisores</div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin:3px 0 14px">Ratios del último balance · calificación FIX · menor apalancamiento y mayor cobertura = mejor salud. Click en un ticker para ver la ON.</div>';
+  const order=['Recomendadas','No Recomendadas'];
+  const groups={}; dataSalud.forEach(x=>{ (groups[x.clasificacion]=groups[x.clasificacion]||[]).push(x); });
+  const claves=Object.keys(groups).sort((a,b)=>{ const ia=order.indexOf(a), ib=order.indexOf(b); return (ia<0?9:ia)-(ib<0?9:ib); });
+  claves.forEach(k=>{
+    const rec = k.toLowerCase().includes('reco') && !k.toLowerCase().includes('no ');
+    h+='<div style="margin:16px 0 8px;display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:50%;background:'+(rec?'var(--ia-green)':'var(--red)')+'"></span><span style="font-size:13px;font-weight:700;color:'+(rec?'var(--ia-green)':'var(--red)')+'">'+k+'</span></div>';
+    h+='<div class="tbl-wrap"><table class="sal-tbl"><thead><tr><th style="text-align:left">Empresa</th><th style="text-align:left">Sector</th><th>Perfil</th><th>Calif.</th><th>Deuda/EBITDA</th><th>Deuda neta/EBITDA</th><th>EBITDA/Int.</th><th>Deuda/Activos</th><th>Deuda/Ingresos</th><th style="text-align:left">ONs</th></tr></thead><tbody>';
+    groups[k].forEach(x=>{
+      h+='<tr><td style="text-align:left;font-weight:600;color:var(--text)">'+x.empresa+'</td>';
+      h+='<td style="text-align:left;color:var(--muted);font-size:10px">'+(x.sector||'—')+'</td>';
+      h+='<td style="text-align:center;font-size:10px;color:var(--text2)">'+(rec?(x.perfil||'—'):'—')+'</td>';
+      h+='<td style="text-align:center"><span style="font-family:DM Mono,monospace;font-weight:700;color:'+ratingColor(x.rating)+'">'+(x.rating||'—')+'</span></td>';
+      h+=salRatio(x.deudaEbitda,3,5,false);
+      h+=salRatio(x.deudaNetaEbitda,3,5,false);
+      h+=salRatio(x.ebitdaInt,5,2.5,true);
+      h+=salRatio(x.deudaActivos,0.4,0.6,false);
+      h+=salRatio(x.deudaIngresos,1,2,false);
+      h+='<td style="text-align:left">'+(x.titulos.length? x.titulos.map(t=>{ const on=dataONs.find(d=>d.tickerUSD===t); return '<span '+(on?('onclick="openModalByIdx('+dataONs.indexOf(on)+')" style="cursor:pointer;'):'style="opacity:.5;')+'display:inline-block;font-family:DM Mono,monospace;font-size:9px;padding:1px 5px;margin:1px;border-radius:4px;background:rgba(36,101,246,.12);color:var(--accent2);border:1px solid rgba(36,101,246,.25)">'+t+'</span>'; }).join(' ') : '<span style="color:var(--muted)">—</span>')+'</td>';
+      h+='</tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+}
+
+// ─── AGENDA DE COBROS · calendario mensual por día ───
+let agendaRef = null;   // primer día del mes mostrado
+let agendaMap = null;   // 'yyyy-mm-dd' -> [{tk,clase,flujo,renta,amort,nombre}]
+let agendaLoaded = false, agendaBuilding = false;
+
+// Carga incremental: dibuja la grilla al instante y la va llenando a medida que cargan los cronogramas
+async function renderAgenda(){
+  const el = document.getElementById('viewAgenda'); if(!el) return;
+  if(!agendaRef){ const t=new Date(); agendaRef=new Date(t.getFullYear(), t.getMonth(), 1); }
+  if(agendaMap){ drawAgenda(); if(agendaLoaded||agendaBuilding) return; }
+  agendaBuilding = true; agendaMap = agendaMap || {}; drawAgenda();
+  const insts = allInstruments(); const today = new Date(); today.setHours(0,0,0,0);
+  let done = 0;
+  await Promise.all(insts.map(async d => {
+    let rows=[]; try { rows = await fetchBondSchedule(d.tickerUSD); } catch(e){}
+    rows.forEach(r => { if (r.flujo>0 && r.date>=today){ const k=r.date.toISOString().slice(0,10); (agendaMap[k]=agendaMap[k]||[]).push({tk:d.tickerUSD, clase:d.clase, flujo:r.flujo, renta:r.interes, amort:r.principal, nombre:d.nombre}); } });
+    if(++done % 8 === 0) drawAgenda();
+  }));
+  agendaLoaded = true; agendaBuilding = false; drawAgenda();
+}
+function agendaNav(delta){ if(!agendaRef) agendaRef=new Date(); agendaRef=new Date(agendaRef.getFullYear(), agendaRef.getMonth()+delta, 1); drawAgenda(); }
+
+function drawAgenda(){
+  const el = document.getElementById('viewAgenda'); if(!el||!agendaMap) return;
+  const MES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const y=agendaRef.getFullYear(), m=agendaRef.getMonth();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const startDow=(new Date(y,m,1).getDay()+6)%7;       // 0=lunes
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const weeks=Math.ceil((startDow+daysInMonth)/7);
+  const gridStart=new Date(y,m,1-startDow);
+  let monthCount=0;
+  let h='<div class="ag-wrap">';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">';
+  h+='<div><div style="font-size:16px;font-weight:700;color:var(--text)">📆 Agenda de Cobros</div><div style="font-size:12px;color:var(--muted);margin-top:3px">Qué paga cada día · ONs y Bonos · montos por 100 VN · desde cronogramas reales</div></div>';
+  h+='<div style="display:flex;align-items:center;gap:8px"><button class="ag-nav" onclick="agendaNav(-1)">◄</button><div style="min-width:150px;text-align:center;font-size:14px;font-weight:700;color:var(--text2)">'+MES[m]+' '+y+'</div><button class="ag-nav" onclick="agendaNav(1)">►</button></div>';
+  h+='</div>';
+  h+='<div class="ag-grid ag-head">'+['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d=>'<div class="ag-dow">'+d+'</div>').join('')+'</div>';
+  h+='<div class="ag-grid">';
+  for(let i=0;i<weeks*7;i++){
+    const cd=new Date(gridStart.getFullYear(),gridStart.getMonth(),gridStart.getDate()+i);
+    const inMonth=cd.getMonth()===m, isToday=cd.getTime()===today.getTime();
+    const pays=(agendaMap[cd.toISOString().slice(0,10)]||[]).slice().sort((a,b)=>b.flujo-a.flujo);
+    if(inMonth) monthCount+=pays.length;
+    h+='<div class="ag-cell'+(inMonth?'':' ag-out')+(isToday?' ag-today':'')+(pays.length&&inMonth?' ag-has':'')+'">';
+    h+='<div class="ag-day">'+cd.getDate()+'</div>';
+    if(inMonth) pays.forEach(p=>{ h+='<div class="ag-pay" title="'+p.tk+' · '+p.nombre+' · '+(p.amort?'cupón + amortización':'cupón')+' (por 100 VN)"><span class="ag-dot" style="background:'+(p.clase==='bono'?'#e9cb30':'#5486f8')+'"></span><span class="ag-tk">'+p.tk+'</span><span class="ag-amt">'+p.flujo.toFixed(2)+'</span></div>'; });
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='<div style="margin-top:12px;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="ag-dot" style="background:#5486f8"></span> ON <span class="ag-dot" style="background:#e9cb30;margin-left:8px"></span> Bono <span style="margin-left:8px">·</span> <b style="color:var(--text2)">'+monthCount+'</b> pagos en '+MES[m]+' '+y+' · montos por 100 VN'+(agendaLoaded?'':' · <span style="color:var(--gold2)">⏳ cargando cronogramas…</span>')+'</div>';
+  h+='</div>';
+  el.innerHTML=h;
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 loadMonitor();
 loadBonos();
+loadSalud();
 setInterval(loadMonitor, 5*60*1000);
 setInterval(loadBonos, 5*60*1000);
+setInterval(loadSalud, 10*60*1000);
 
 </script>
   <!-- IA Brand Footer -->
