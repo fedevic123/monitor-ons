@@ -646,7 +646,29 @@ select.calc-in { cursor:pointer; }
 .eq-leg b { font-family:'Roboto Mono',monospace; color:var(--text); }
 .eq-leg span { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .eq-leg em { margin-left:auto; font-style:normal; font-family:'DM Mono',monospace; color:var(--text); }
-@media(max-width:640px){ .eq-nm{max-width:110px} .eq-tbl{font-size:11px} .eq-legend{grid-template-columns:1fr} }
+/* oportunidades / trending / noticias */
+.eq-movers { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+.eq-mcol { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+.eq-mhead { font-size:12px; font-weight:700; padding:10px 12px; border-bottom:1px solid var(--border); }
+.eq-mhead.up { color:var(--green); } .eq-mhead.down { color:var(--red); } .eq-mhead.act { color:var(--accent2); }
+.eq-trend { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.eq-trend .eq-mrow { background:var(--surface); border:1px solid var(--border); border-radius:9px; }
+.eq-mrow { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--border); }
+.eq-mcol .eq-mrow:last-child { border-bottom:none; }
+.eq-mrn { display:flex; flex-direction:column; min-width:0; }
+.eq-mrn b { font-family:'Roboto Mono',monospace; font-size:12px; color:var(--accent2); }
+.eq-mrn span { font-size:10px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.eq-mrv { display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0; }
+.eq-mrv span { font-family:'DM Mono',monospace; font-size:12px; color:var(--text); }
+.eq-mrv em { font-family:'DM Mono',monospace; font-size:11px; font-style:normal; }
+.eq-empty { padding:14px; text-align:center; color:var(--muted); font-size:12px; }
+.eq-news { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.eq-nw { display:block; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:13px 15px; text-decoration:none; transition:border-color .12s; }
+.eq-nw:hover { border-color:var(--accent2); }
+.eq-nw-t { font-family:'Poppins',sans-serif; font-size:13px; color:var(--text); line-height:1.4; margin-bottom:7px; }
+.eq-nw-m { display:flex; flex-wrap:wrap; gap:7px; font-size:10px; color:var(--muted); align-items:center; }
+.eq-nw-tk { font-family:'Roboto Mono',monospace; color:var(--accent2); }
+@media(max-width:640px){ .eq-nm{max-width:110px} .eq-tbl{font-size:11px} .eq-legend{grid-template-columns:1fr} .eq-movers{grid-template-columns:1fr} .eq-trend{grid-template-columns:1fr 1fr} .eq-news{grid-template-columns:1fr} }
 
 /* ── PRINT / PDF ── */
 @media print {
@@ -826,6 +848,9 @@ select.calc-in { cursor:pointer; }
     <span class="uni-group" data-uni="equity" style="display:none">
       <button class="tab sec" data-sec="eqrec" onclick="setSection('eqrec')">📋 Recomendaciones</button>
       <button class="tab sec" data-sec="eqcart" onclick="setSection('eqcart')">💼 Carteras sugeridas</button>
+      <button class="tab sec" data-sec="eqop" onclick="setSection('eqop')">🚀 Oportunidades</button>
+      <button class="tab sec" data-sec="eqtr" onclick="setSection('eqtr')">🔥 Trending</button>
+      <button class="tab sec" data-sec="eqnews" onclick="setSection('eqnews')">📰 Noticias</button>
     </span>
   </div>
   <div class="tabs subtabs" id="subTabs">
@@ -965,6 +990,9 @@ select.calc-in { cursor:pointer; }
 <div id="viewCaucion" style="display:none"></div>
 <div id="viewEqRec" style="display:none"></div>
 <div id="viewEqCart" style="display:none"></div>
+<div id="viewEqOp" style="display:none"></div>
+<div id="viewEqTrend" style="display:none"></div>
+<div id="viewEqNews" style="display:none"></div>
 
 <!-- SALUD VIEW -->
 <div class="main" id="viewSalud" style="display:none"></div>
@@ -1082,8 +1110,6 @@ const EQ_CARTERAS = [
   { key:'trans',  nombre:'Retiro · Transición',     perfil:'40-65 años',  pub:'2PACX-1vRyCHZ6JEhZ9a_F4InXl7xHma3DIxkIuaCHhKWIldJbbzYEkPDSYmf85i1GiZ34YQ', gid:1269851035 },
   { key:'desac',  nombre:'Retiro · Desacumulación', perfil:'+65 años',    pub:'2PACX-1vRyCHZ6JEhZ9a_F4InXl7xHma3DIxkIuaCHhKWIldJbbzYEkPDSYmf85i1GiZ34YQ', gid:1213717703 },
 ];
-// Hoja de métricas (GOOGLEFINANCE + IMPORTXML) que publica el usuario. Vacío → métricas en "—".
-const EQ_METRICS = { pub:'', gid:0 };
 
 // ticker del CSV → nombre de pestaña
 // El ticker del CSV termina en D (USD). La pestaña es los primeros 4 chars del ticker sin la D final
@@ -1804,8 +1830,12 @@ function setView(v){
   document.getElementById('viewCaucion').style.display=v==='caucion'?'block':'none';
   document.getElementById('viewEqRec').style.display=v==='eqrec'?'block':'none';
   document.getElementById('viewEqCart').style.display=v==='eqcart'?'block':'none';
-  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc'||v==='caucion'||v==='eqrec'||v==='eqcart')?'none':'';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc'||v==='caucion'||v==='eqrec'||v==='eqcart';
+  document.getElementById('viewEqOp').style.display=v==='eqop'?'block':'none';
+  document.getElementById('viewEqTrend').style.display=v==='eqtr'?'block':'none';
+  document.getElementById('viewEqNews').style.display=v==='eqnews'?'block':'none';
+  const eqViews=['eqrec','eqcart','eqop','eqtr','eqnews'];
+  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc'||v==='caucion'||eqViews.includes(v))?'none':'';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc'||v==='caucion'||eqViews.includes(v);
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('#subTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
@@ -1820,6 +1850,9 @@ function setView(v){
   else if(v==='caucion') renderCaucion();
   else if(v==='eqrec') renderEqRec();
   else if(v==='eqcart') renderEqCart();
+  else if(v==='eqop') renderEqOp();
+  else if(v==='eqtr') renderEqTrend();
+  else if(v==='eqnews') renderEqNews();
   else if(v==='salud') renderSalud();
   else if(v==='agenda') renderAgenda();
   else applyFilters();
@@ -1862,6 +1895,9 @@ function setSection(s){
     else if(s==='cau') setView('caucion');
     else if(s==='eqrec') setView('eqrec');
     else if(s==='eqcart') setView('eqcart');
+    else if(s==='eqop') setView('eqop');
+    else if(s==='eqtr') setView('eqtr');
+    else if(s==='eqnews') setView('eqnews');
   }
 }
 
@@ -2588,22 +2624,6 @@ function parseCartera(txt){
   return {meta, holdings};
 }
 
-// Métricas equity (hoja GOOGLEFINANCE del usuario): header en fila 0, key = TickerGuia.
-function parseEquityMetrics(txt){
-  const rows=parseCSVRows(txt); if(rows.length<2) return {};
-  const H=rows[0].map(x=>cl(x).toLowerCase().replace(/\s+/g,''));
-  const idx=n=>H.indexOf(n);
-  const iT=idx('tickerguia'); if(iT<0) return {};
-  const toNum=v=>{ const n=parseFloat(cl(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; };
-  const m={};
-  for(let i=1;i<rows.length;i++){ const c=rows[i]; const tk=cl(c[iT]).toUpperCase(); if(!tk) continue;
-    const g=k=>{ const j=idx(k); return j<0?null:toNum(c[j]); };
-    m[tk]={ tipo:cl(c[idx('tipo')]), precio:g('precio'), varDia:g('var%dia'), vsSMA200:g('%vssma200'),
-            posRango:g('posrango52'), var1m:g('var1m%'), pe:g('pe'), evEbitda:g('ev_ebitda'), roe:g('roe') };
-  }
-  return m;
-}
-
 async function loadEquity(){
   if(equityLoaded) return;
   try{ const t=await fetch(`${CSVPUB(EQ_GUIA.pub)}&gid=${EQ_GUIA.gid}&t=${Date.now()}`).then(r=>r.text()); dataEquity=parseGuiaEquity(t); }catch(e){ dataEquity=[]; }
@@ -2611,7 +2631,12 @@ async function loadEquity(){
     try{ const t=await fetch(`${CSVPUB(cfg.pub)}&gid=${cfg.gid}&t=${Date.now()}`).then(r=>r.text()); dataCarteras[cfg.key]=parseCartera(t); }
     catch(e){ dataCarteras[cfg.key]={meta:{},holdings:[]}; }
   }));
-  if(EQ_METRICS.pub){ try{ const t=await fetch(`${CSVPUB(EQ_METRICS.pub)}&gid=${EQ_METRICS.gid}&t=${Date.now()}`).then(r=>r.text()); equityMetrics=parseEquityMetrics(t); }catch(e){} }
+  // métricas en vivo desde el backend (Yahoo Finance, sin key)
+  try{
+    const tks=dataEquity.map(p=>p.ticker).join(',');
+    const j=await fetch(`/api/equity?action=metrics&tickers=${encodeURIComponent(tks)}`).then(r=>r.json());
+    if(j&&j.ok) equityMetrics=j.data||{};
+  }catch(e){}
   equityLoaded=true;
 }
 
@@ -2867,7 +2892,7 @@ function renderEqRec(){
   if(!equityLoaded){ el.innerHTML='<div class="state"><div class="state-spinner"></div>Cargando guía de recomendaciones…</div>'; return; }
   if(!dataEquity.length){ el.innerHTML='<div class="state">No se pudo cargar la guía de equity.</div>'; return; }
   const mkBtns=(type,vals)=>vals.map(v=>`<button class="eq-fbtn${eqFilter[type]===v?' on':''}" onclick="eqSetFilter('${type}','${v}')">${v}</button>`).join('');
-  const metaNote = eqHasMetrics()? '' : `<div class="eq-note">📊 Las columnas de technicals/fundamentals aparecen al publicar la hoja de métricas. Mientras tanto se muestran en "—".</div>`;
+  const metaNote = eqHasMetrics()? '' : `<div class="eq-note">📊 No se pudieron cargar las métricas en vivo en este momento. Reintentá en unos minutos.</div>`;
   el.innerHTML=`<div class="eq-wrap">
     <div class="eq-title">📋 Equity recomendado <span class="eq-sub">· guía Inversiones Andinas</span></div>
     <div class="eq-filters">
@@ -2895,30 +2920,30 @@ function eqApplyRec(){
   const head=`<thead><tr>
     <th style="text-align:left">Ticker</th><th style="text-align:left">Nombre</th><th>Tipo</th><th>Acción</th>
     <th style="text-align:right">Precio</th><th style="text-align:right">Día</th>
-    <th style="text-align:right" title="Precio vs media móvil 200">vs SMA200</th>
-    <th title="Posición en rango 52 semanas">Rango 52s</th>
-    <th style="text-align:right">1 mes</th>
-    <th style="text-align:right">P/E</th><th style="text-align:right">EV/EBITDA</th><th style="text-align:right">ROE</th>
+    <th style="text-align:right" title="Precio vs media móvil 50 ruedas">vs SMA50</th>
+    <th style="text-align:right" title="Precio vs media móvil 200 ruedas">vs SMA200</th>
+    <th title="Posición en rango 52 semanas (0=mínimo, 100=máximo)">Rango 52s</th>
+    <th style="text-align:right">P/E</th><th style="text-align:right" title="Enterprise Value / EBITDA">EV/EBITDA</th><th style="text-align:right" title="Return on Equity">ROE</th>
   </tr></thead>`;
+  const dash='<span style="color:var(--muted)">—</span>';
   const rows=list.map(p=>{
     const m=equityMetrics[p.ticker]||{};
-    const isETF=(m.tipo||'').toUpperCase()==='ETF';
-    const rango = (m.posRango==null||isNaN(m.posRango)) ? '<span style="color:var(--muted)">—</span>'
+    const rango = (m.posRango==null||isNaN(m.posRango)) ? dash
       : `<div class="eq-bar"><div class="eq-bar-fill" style="width:${Math.max(2,Math.min(100,m.posRango))}%"></div><span>${Math.round(m.posRango)}</span></div>`;
-    const fund = v => (isETF? '<span style="color:var(--muted)">—</span>' : (v==null?'—':eqNum(v)));
+    const fund = v => (v==null?dash:eqNum(v));
     return `<tr>
       <td style="text-align:left"><b class="eq-tk">${p.ticker}</b></td>
       <td style="text-align:left" class="eq-nm">${p.nombre||''}</td>
       <td style="text-align:center"><span class="eq-grp">${p.grupo}</span></td>
       <td style="text-align:center">${accCell(p)}</td>
-      <td style="text-align:right">${m.precio!=null?eqNum(m.precio):'—'}</td>
+      <td style="text-align:right">${m.precio!=null?eqNum(m.precio)+(m.ccy==='ARS'?'<span style="font-size:8px;color:var(--muted)"> AR$</span>':''):dash}</td>
       <td style="text-align:right;color:${eqColPos(m.varDia)}">${eqPct(m.varDia,true)}</td>
+      <td style="text-align:right;color:${eqColPos(m.vsSMA50)}">${eqPct(m.vsSMA50,true)}</td>
       <td style="text-align:right;color:${eqColPos(m.vsSMA200)};font-weight:600">${eqPct(m.vsSMA200,true)}</td>
       <td>${rango}</td>
-      <td style="text-align:right;color:${eqColPos(m.var1m)}">${eqPct(m.var1m,true)}</td>
-      <td style="text-align:right">${m.pe!=null?eqNum(m.pe):'—'}</td>
+      <td style="text-align:right">${m.pe!=null?eqNum(m.pe):dash}</td>
       <td style="text-align:right">${fund(m.evEbitda)}</td>
-      <td style="text-align:right">${m.roe!=null&&!isETF?eqPct(m.roe):'<span style="color:var(--muted)">—</span>'}</td>
+      <td style="text-align:right">${m.roe!=null?eqPct(m.roe):dash}</td>
     </tr>`;
   }).join('');
   tbl.innerHTML=head+`<tbody>${rows||'<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Sin papeles para este filtro.</td></tr>'}</tbody>`;
@@ -2991,6 +3016,44 @@ function eqRenderCartDetail(){
     </div>
     ${ data.holdings.length ? (eqCartView==='torta' ? eqPieHTML(data.holdings) : grpHTML) : '<div class="eq-note">Sin composición disponible.</div>' }
   </div>`;
+}
+
+// ─── EQUITY: Oportunidades / Trending / Noticias (backend Yahoo) ───
+async function eqApi(action, extra){ try{ const r=await fetch('/api/equity?action='+action+(extra||'')); return await r.json(); }catch(e){ return {ok:false, error:e.message}; } }
+function eqMoverRow(q){ const c=(q.chg>=0)?'var(--green)':'var(--red)'; return `<div class="eq-mrow"><div class="eq-mrn"><b>${q.sym}</b><span>${(q.name||'').slice(0,24)}</span></div><div class="eq-mrv"><span>${q.precio!=null?eqNum(q.precio):'—'}</span><em style="color:${c}">${eqPct(q.chg,true)}</em></div></div>`; }
+function eqTimeAgo(ts){ if(!ts) return ''; const s=Math.floor(Date.now()/1000-ts); if(s<3600) return Math.max(1,Math.floor(s/60))+' min'; if(s<86400) return Math.floor(s/3600)+' h'; return Math.floor(s/86400)+' d'; }
+
+async function renderEqOp(){
+  const el=document.getElementById('viewEqOp'); if(!el) return;
+  el.innerHTML=`<div class="eq-wrap"><div class="eq-title">🚀 Oportunidades del día <span class="eq-sub">· mercado global (Yahoo Finance)</span></div>
+    <div id="eqOpBody"><div class="state"><div class="state-spinner"></div>Cargando movimientos del mercado…</div></div>
+    <div class="eq-foot">Cotizaciones demoradas ~15 min · mercado de EE.UU. No constituye recomendación de inversión.</div></div>`;
+  const j=await eqApi('movers'); const box=document.getElementById('eqOpBody'); if(!box) return;
+  if(!j||!j.ok){ box.innerHTML='<div class="eq-note">No se pudieron cargar las oportunidades. Reintentá en unos minutos.</div>'; return; }
+  const col=(t,arr,cls)=>`<div class="eq-mcol"><div class="eq-mhead ${cls}">${t}</div>${(arr&&arr.length?arr:[]).map(eqMoverRow).join('')||'<div class="eq-empty">—</div>'}</div>`;
+  box.innerHTML=`<div class="eq-movers">${col('📈 Mayores subas',j.data.gainers,'up')}${col('📉 Mayores bajas',j.data.losers,'down')}${col('🔄 Más operadas',j.data.actives,'act')}</div>`;
+}
+async function renderEqTrend(){
+  const el=document.getElementById('viewEqTrend'); if(!el) return;
+  el.innerHTML=`<div class="eq-wrap"><div class="eq-title">🔥 Trending <span class="eq-sub">· lo más buscado del mundo (Yahoo Finance)</span></div>
+    <div id="eqTrBody"><div class="state"><div class="state-spinner"></div>Cargando tendencias…</div></div>
+    <div class="eq-foot">Tickers más consultados en EE.UU. en este momento. No constituye recomendación.</div></div>`;
+  const j=await eqApi('trending'); const box=document.getElementById('eqTrBody'); if(!box) return;
+  if(!j||!j.ok||!j.data.list.length){ box.innerHTML='<div class="eq-note">No se pudo cargar el trending. Reintentá en unos minutos.</div>'; return; }
+  box.innerHTML=`<div class="eq-trend">${j.data.list.map(eqMoverRow).join('')}</div>`;
+}
+async function renderEqNews(){
+  const el=document.getElementById('viewEqNews'); if(!el) return;
+  el.innerHTML=`<div class="eq-wrap"><div class="eq-title">📰 Noticias <span class="eq-sub">· equity y mercados (Yahoo Finance)</span></div>
+    <div id="eqNwBody"><div class="state"><div class="state-spinner"></div>Cargando noticias…</div></div>
+    <div class="eq-foot">Titulares de fuentes públicas. Los enlaces abren el sitio original.</div></div>`;
+  const j=await eqApi('news', '&q='+encodeURIComponent('stock market')); const box=document.getElementById('eqNwBody'); if(!box) return;
+  if(!j||!j.ok||!j.data.news.length){ box.innerHTML='<div class="eq-note">No se pudieron cargar las noticias. Reintentá en unos minutos.</div>'; return; }
+  box.innerHTML=`<div class="eq-news">${j.data.news.map(n=>`
+    <a class="eq-nw" href="${n.link}" target="_blank" rel="noopener noreferrer">
+      <div class="eq-nw-t">${n.title||''}</div>
+      <div class="eq-nw-m"><span>${n.publisher||''}</span>${n.ts?`<span>· ${eqTimeAgo(n.ts)}</span>`:''}${(n.tickers&&n.tickers.length)?`<span class="eq-nw-tk">${n.tickers.slice(0,4).join(' · ')}</span>`:''}</div>
+    </a>`).join('')}</div>`;
 }
 
 async function fetchBondSchedule(tickerUSD){
