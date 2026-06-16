@@ -592,6 +592,51 @@ select.calc-in { cursor:pointer; }
 .cau-tbl tbody tr:hover { background:var(--surface2); }
 @media(max-width:640px){ .calc-grid{grid-template-columns:1fr} }
 
+/* ── EQUITY ── */
+.eq-wrap { padding:4px 0 60px; }
+.eq-title { font-size:17px; font-weight:700; color:var(--text); }
+.eq-sub { font-size:12px; font-weight:400; color:var(--muted); }
+.eq-filters { display:flex; flex-wrap:wrap; gap:18px; margin:14px 0 10px; }
+.eq-fg { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.eq-fg > span { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-right:2px; }
+.eq-fbtn { font-family:'Poppins',sans-serif; font-size:11px; padding:5px 11px; border-radius:7px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:all .12s; }
+.eq-fbtn:hover { border-color:var(--accent2); }
+.eq-fbtn.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+.eq-note { font-size:11px; color:var(--text2); background:rgba(36,101,246,.08); border:1px solid var(--border2); border-radius:8px; padding:9px 12px; margin:6px 0 12px; }
+.eq-tbl { width:100%; border-collapse:collapse; font-size:12px; }
+.eq-tbl th { font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:600; padding:8px 9px; border-bottom:1px solid var(--border2); white-space:nowrap; text-align:center; position:sticky; top:0; background:var(--bg); }
+.eq-tbl td { padding:8px 9px; border-bottom:1px solid var(--border); font-family:'DM Mono',monospace; white-space:nowrap; }
+.eq-tbl tbody tr:hover { background:var(--surface2); }
+.eq-tk { font-family:'Roboto Mono',monospace; color:var(--accent2); font-weight:700; }
+.eq-nm { font-family:'Poppins',sans-serif; color:var(--text); max-width:170px; overflow:hidden; text-overflow:ellipsis; }
+.eq-grp { font-size:9px; padding:2px 7px; border-radius:10px; background:var(--surface3); color:var(--text2); border:1px solid var(--border); }
+.eq-acc { display:inline-block; font-family:'Poppins',sans-serif; font-size:10px; font-weight:600; color:#062018; padding:3px 9px; border-radius:10px; }
+.eq-pf { display:inline-block; width:22px; height:22px; line-height:20px; text-align:center; border:1.5px solid; border-radius:6px; font-size:11px; margin:0 1px; }
+.eq-bar { position:relative; width:62px; height:14px; background:var(--surface3); border-radius:4px; margin:0 auto; overflow:hidden; }
+.eq-bar-fill { position:absolute; left:0; top:0; bottom:0; background:linear-gradient(90deg,var(--accent),var(--ia-green)); }
+.eq-bar span { position:relative; font-size:9px; color:var(--text); line-height:14px; }
+/* carteras */
+.eq-cpills { display:flex; flex-wrap:wrap; gap:7px; margin:14px 0 16px; }
+.eq-cpill { font-family:'Poppins',sans-serif; font-size:11px; padding:7px 13px; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text2); cursor:pointer; transition:all .12s; }
+.eq-cpill:hover { border-color:var(--accent2); }
+.eq-cpill.on { background:var(--ia-dark); border-color:var(--accent2); color:#fff; font-weight:600; }
+.eq-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; }
+.eq-cardhead { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px; }
+.eq-cardtitle { font-size:15px; font-weight:700; color:var(--text); }
+.eq-cardperfil { display:inline-block; margin-top:4px; font-size:10px; padding:2px 9px; border-radius:10px; background:var(--accent); color:#fff; }
+.eq-cardmonto { display:flex; flex-direction:column; gap:3px; text-align:right; }
+.eq-cardmonto span { font-family:'DM Mono',monospace; font-size:12px; color:var(--ia-green); }
+.eq-cardmeta { display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--text2); margin-bottom:10px; }
+.eq-cardmeta b { color:var(--text); font-weight:600; }
+.eq-carddesc { font-size:11px; color:var(--muted); line-height:1.55; margin-bottom:14px; padding:10px 12px; background:var(--surface2); border-radius:8px; }
+.eq-cgrp { font-size:11px; font-weight:700; color:var(--text2); margin:14px 0 4px; text-transform:uppercase; letter-spacing:.05em; }
+.eq-ctbl td { white-space:normal; }
+.eq-wbar { display:inline-block; vertical-align:middle; width:54px; height:8px; background:var(--surface3); border-radius:4px; overflow:hidden; margin-right:6px; }
+.eq-wbar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--ia-green)); }
+.eq-pct { font-family:'DM Mono',monospace; font-size:11px; color:var(--text); }
+.eq-foot { font-size:10px; color:var(--muted); line-height:1.5; margin-top:16px; }
+@media(max-width:640px){ .eq-nm{max-width:110px} .eq-tbl{font-size:11px} }
+
 /* ── PRINT / PDF ── */
 @media print {
   * {
@@ -749,6 +794,7 @@ select.calc-in { cursor:pointer; }
   <div class="tabs" id="universeTabs">
     <button class="tab uni active" data-uni="dolar" onclick="setUniverse('dolar')">💵 Dólar</button>
     <button class="tab uni" data-uni="pesos" onclick="setUniverse('pesos')">💰 Pesos</button>
+    <button class="tab uni" data-uni="equity" onclick="setUniverse('equity')">📈 Equity</button>
   </div>
   <div class="tabs" id="sectionTabs">
     <span class="uni-group" data-uni="dolar" style="display:contents">
@@ -765,6 +811,10 @@ select.calc-in { cursor:pointer; }
       <button class="tab sec" data-sec="sim" onclick="setSection('sim')">💵 Simulador<sup class="beta">BETA</sup></button>
       <button class="tab sec" data-sec="calc" onclick="setSection('calc')">🧮 Calculadora</button>
       <button class="tab sec" data-sec="cau" onclick="setSection('cau')">🏦 Caución</button>
+    </span>
+    <span class="uni-group" data-uni="equity" style="display:none">
+      <button class="tab sec" data-sec="eqrec" onclick="setSection('eqrec')">📋 Recomendaciones</button>
+      <button class="tab sec" data-sec="eqcart" onclick="setSection('eqcart')">💼 Carteras sugeridas</button>
     </span>
   </div>
   <div class="tabs subtabs" id="subTabs">
@@ -902,6 +952,8 @@ select.calc-in { cursor:pointer; }
 <div id="viewSimulador" style="display:none"></div>
 <div id="viewCalc" style="display:none"></div>
 <div id="viewCaucion" style="display:none"></div>
+<div id="viewEqRec" style="display:none"></div>
+<div id="viewEqCart" style="display:none"></div>
 
 <!-- SALUD VIEW -->
 <div class="main" id="viewSalud" style="display:none"></div>
@@ -1007,6 +1059,21 @@ const GID_MAP_CER = {
   'DICP':2146701890,'DIP0':2029444698,'PARP':1839918321,'PAP0':277942552,'CUAP':18471020
 };
 
+// ─── UNIVERSO EQUITY: guía de recomendaciones + carteras sugeridas + métricas ───
+const CSVPUB = id => `https://docs.google.com/spreadsheets/d/e/${id}/pub?single=true&output=csv`;
+const EQ_GUIA = { pub:'2PACX-1vTpvGjtOEm_2-I0Y1Y5UZy91xMy8uN3WheXgpLy2jlEysN1oy8mEZfhbM-GgSk0BQ', gid:1513321094 };
+const EQ_CARTERAS = [
+  { key:'conser', nombre:'Conservadora',  perfil:'Conservador', pub:'2PACX-1vQWEe7MQLgQEHEYzzYkuTjjf9CJm8Cw91MvO9jLj08qM6F91cZ_1x0rWhgNzcvpwg', gid:1097274967 },
+  { key:'moder',  nombre:'Moderada',      perfil:'Moderado',    pub:'2PACX-1vReO7nS8U-87Dff8FRd0LZJtoNqyh2dZ7y9yeioaGz0gRvQIOVmfRMtZyQ9PPqJNA', gid:1970372759 },
+  { key:'agres',  nombre:'Agresiva',      perfil:'Agresivo',    pub:'2PACX-1vQlG4cl3m1_0LOh6U0xODIzvwjFAQtPJuAFf7AY2nfBrZCtStYiA8N8Fs0_4-rK5Q', gid:1097486747 },
+  { key:'onsmens',nombre:'ONs renta mensual', perfil:'Renta mensual USD', pub:'2PACX-1vT6fu53Sbg0dQE5h-25F_LWJkrTjFFPxfX6zGs2zunV0NXv5k6Y3ajyaR52nQSaCSeZ57glOYC04Ujg', gid:1145881279 },
+  { key:'acum',   nombre:'Retiro · Acumulación',    perfil:'18-40 años',  pub:'2PACX-1vRyCHZ6JEhZ9a_F4InXl7xHma3DIxkIuaCHhKWIldJbbzYEkPDSYmf85i1GiZ34YQ', gid:499494413 },
+  { key:'trans',  nombre:'Retiro · Transición',     perfil:'40-65 años',  pub:'2PACX-1vRyCHZ6JEhZ9a_F4InXl7xHma3DIxkIuaCHhKWIldJbbzYEkPDSYmf85i1GiZ34YQ', gid:1269851035 },
+  { key:'desac',  nombre:'Retiro · Desacumulación', perfil:'+65 años',    pub:'2PACX-1vRyCHZ6JEhZ9a_F4InXl7xHma3DIxkIuaCHhKWIldJbbzYEkPDSYmf85i1GiZ34YQ', gid:1213717703 },
+];
+// Hoja de métricas (GOOGLEFINANCE + IMPORTXML) que publica el usuario. Vacío → métricas en "—".
+const EQ_METRICS = { pub:'', gid:0 };
+
 // ticker del CSV → nombre de pestaña
 // El ticker del CSV termina en D (USD). La pestaña es los primeros 4 chars del ticker sin la D final
 function tickerToTab(tickerUSD) {
@@ -1025,7 +1092,9 @@ let allData = [], filtered = [];
 let dataONs = [], dataBonos = [];   // datasets por clase
 let dataSalud = [];                 // salud crediticia de emisores de ONs
 let dataTasaFija = [], dataCER = [];  // universo pesos
-let currentUniverse = 'dolar';      // 'dolar' | 'pesos'
+let dataEquity = [], dataCarteras = {}, equityMetrics = {};  // universo equity
+let equityLoaded = false;
+let currentUniverse = 'dolar';      // 'dolar' | 'pesos' | 'equity'
 let currentClass = 'ons';           // 'ons' | 'bonos' (sección activa de instrumentos)
 let leyF='all', tirF='all', pagoF=null;
 let sortK='tir', sortAsc=true;
@@ -1722,8 +1791,10 @@ function setView(v){
   document.getElementById('viewAgenda').style.display=v==='agenda'?'block':'none';
   document.getElementById('viewCalc').style.display=v==='calc'?'block':'none';
   document.getElementById('viewCaucion').style.display=v==='caucion'?'block':'none';
-  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc'||v==='caucion')?'none':'';
-  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc'||v==='caucion';
+  document.getElementById('viewEqRec').style.display=v==='eqrec'?'block':'none';
+  document.getElementById('viewEqCart').style.display=v==='eqcart'?'block':'none';
+  const fpdf=document.getElementById('footerPdfBtn'); if(fpdf) fpdf.style.display=(v==='simulador'||v==='calc'||v==='caucion'||v==='eqrec'||v==='eqcart')?'none':'';
+  const hideControls = v==='curva'||v==='favoritas'||v==='nuevas'||v==='cartera'||v==='simulador'||v==='salud'||v==='agenda'||v==='calc'||v==='caucion'||v==='eqrec'||v==='eqcart';
   document.getElementById('controls').style.display=hideControls?'none':'block';
   document.querySelectorAll('#subTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.view===v));
   ['vbCards','vbTable','vbCurva'].forEach((id,i)=>{
@@ -1736,6 +1807,8 @@ function setView(v){
   else if(v==='simulador') renderSimulador();
   else if(v==='calc') renderCalc();
   else if(v==='caucion') renderCaucion();
+  else if(v==='eqrec') renderEqRec();
+  else if(v==='eqcart') renderEqCart();
   else if(v==='salud') renderSalud();
   else if(v==='agenda') renderAgenda();
   else applyFilters();
@@ -1748,6 +1821,7 @@ function setUniverse(u){
   agendaMap=null; agendaLoaded=false; agendaBuilding=false;   // agenda se recalcula por universo
   document.querySelectorAll('#universeTabs .tab').forEach(t=>t.classList.toggle('active', t.dataset.uni===u));
   document.querySelectorAll('#sectionTabs .uni-group').forEach(g=>g.style.display = (g.dataset.uni===u)?'contents':'none');
+  if(u==='equity'){ setSection('eqrec'); loadEquity().then(()=>{ if(currentUniverse==='equity') setView(currentView); }); return; }
   setSection(u==='pesos' ? 'tasafija' : 'ons');
 }
 
@@ -1775,6 +1849,8 @@ function setSection(s){
     else if(s==='agenda') setView('agenda');
     else if(s==='calc') setView('calc');
     else if(s==='cau') setView('caucion');
+    else if(s==='eqrec') setView('eqrec');
+    else if(s==='eqcart') setView('eqcart');
   }
 }
 
@@ -2434,6 +2510,100 @@ function parseCSVRows(txt){
   return rows;
 }
 
+// ─── EQUITY: parsers ───
+const EQ_PERFILES = ['Conservador','Moderado','Agresivo'];
+function eqTicker(s){ let t=cl(s).split('-')[0].trim(); if(t.includes('/')) t=t.split('/')[0].trim(); return t.toUpperCase().replace(/[^A-Z0-9.]/g,''); }
+function eqName(s){ const p=cl(s).split('-'); return p.length>1 ? p.slice(1).join('-').trim() : ''; }
+function eqAccion(a){ a=cl(a).toLowerCase(); if(a.startsWith('compr'))return'Comprar'; if(a.startsWith('mant'))return'Mantener'; if(a.startsWith('vend'))return'Vender'; return''; }
+function rowFind(c, re){ for(let k=0;k<c.length;k++){ if(re.test(cl(c[k]))){ for(let m=k+1;m<c.length;m++){ const v=cl(c[m]); if(v) return v.replace(/\s+/g,' ').trim(); } return ''; } } return null; }
+
+// Guía: matriz 3 perfiles × clase. Solo la región "RENTA VARIABLE" (hasta FCIs).
+function parseGuiaEquity(txt){
+  const rows=parseCSVRows(txt);
+  let start=-1, end=rows.length;
+  for(let i=0;i<rows.length;i++){ const j=rows[i].join(' ').toUpperCase();
+    if(start<0 && j.includes('RENTA VARIABLE')) start=i+1;
+    else if(start>=0 && j.includes('FCIS')){ end=i; break; }
+  }
+  if(start<0) return [];
+  const map={}; let grupo='';
+  for(let i=start;i<end;i++){
+    const c=rows[i]; const lbl=cl(c[1]);
+    if(/cedear/i.test(lbl)) grupo='CEDEAR';
+    else if(/acciones?\s+argentina/i.test(lbl)) grupo='Acción Arg';
+    for(let p=0;p<3;p++){
+      const tk=eqTicker(c[2+p*2]); const ac=eqAccion(c[3+p*2]);
+      if(!tk || !ac) continue;
+      if(!map[tk]) map[tk]={ ticker:tk, nombre:eqName(c[2+p*2]), grupo, acciones:{} };
+      if(!map[tk].nombre) map[tk].nombre=eqName(c[2+p*2]);
+      map[tk].acciones[EQ_PERFILES[p]]=ac;
+    }
+  }
+  return Object.values(map);
+}
+
+// Cartera: bloque meta + tabla Ticker/Activo/%/TIR (col del label varía entre 0 y 1).
+function parseCartera(txt){
+  const rows=parseCSVRows(txt);
+  const meta={titulo:'',montoUSD:'',montoARS:'',objetivo:'',horizonte:'',liquidez:'',descripcion:''};
+  let hi=-1, tk=-1, ac=-1, pc=-1, tr=-1;
+  for(let i=0;i<rows.length;i++){
+    const c=rows[i]; const joinl=c.join(' ').toLowerCase();
+    if(hi<0 && joinl.includes('ticker') && joinl.includes('activo')){
+      hi=i; c.forEach((x,idx)=>{ const v=cl(x).toLowerCase(); if(v==='ticker')tk=idx; else if(v==='activo')ac=idx; else if(v==='%')pc=idx; else if(v==='tir')tr=idx; });
+      continue;
+    }
+    if(hi<0){
+      if(!meta.titulo){ const t=(cl(c[0])||cl(c[1])); if(/cartera|propuesta/i.test(t)) meta.titulo=t.replace(/\s+/g,' ').trim(); }
+      const mo=rowFind(c,/monto/i); if(mo!==null){ meta.montoUSD=(c.find(x=>/USD/i.test(x))||'').replace(/\s+/g,' ').trim(); meta.montoARS=(c.find(x=>/ARS/i.test(x))||'').replace(/\s+/g,' ').trim(); }
+      const ob=rowFind(c,/objetivo/i); if(ob!==null) meta.objetivo=ob;
+      const ho=rowFind(c,/horizonte/i); if(ho!==null) meta.horizonte=ho;
+      const li=rowFind(c,/liquidez/i); if(li!==null) meta.liquidez=li;
+      const de=rowFind(c,/descripci/i); if(de!==null) meta.descripcion=de;
+    }
+  }
+  const holdings=[];
+  if(hi>=0 && tk>=0){
+    let clase='';
+    for(let i=hi+1;i<rows.length;i++){
+      const c=rows[i]; const j=c.join('').toLowerCase();
+      if(j.includes('*las carteras')||j.includes('tentativ')) break;
+      for(let k=0;k<tk;k++){ const v=cl(c[k]); if(/renta\s+(fija|variable)/i.test(v)) clase=v.replace(/\s+/g,' ').trim(); }
+      const ticker=cl(c[tk]); const activo=cl(c[ac]);
+      if(!ticker && !activo) continue;
+      holdings.push({ clase, ticker:ticker.toUpperCase(), activo, pct:cl(c[pc]).replace(/\s+/g,''), tir: tr>=0?cl(c[tr]):'' });
+    }
+  }
+  return {meta, holdings};
+}
+
+// Métricas equity (hoja GOOGLEFINANCE del usuario): header en fila 0, key = TickerGuia.
+function parseEquityMetrics(txt){
+  const rows=parseCSVRows(txt); if(rows.length<2) return {};
+  const H=rows[0].map(x=>cl(x).toLowerCase().replace(/\s+/g,''));
+  const idx=n=>H.indexOf(n);
+  const iT=idx('tickerguia'); if(iT<0) return {};
+  const toNum=v=>{ const n=parseFloat(cl(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; };
+  const m={};
+  for(let i=1;i<rows.length;i++){ const c=rows[i]; const tk=cl(c[iT]).toUpperCase(); if(!tk) continue;
+    const g=k=>{ const j=idx(k); return j<0?null:toNum(c[j]); };
+    m[tk]={ tipo:cl(c[idx('tipo')]), precio:g('precio'), varDia:g('var%dia'), vsSMA200:g('%vssma200'),
+            posRango:g('posrango52'), var1m:g('var1m%'), pe:g('pe'), evEbitda:g('ev_ebitda'), roe:g('roe') };
+  }
+  return m;
+}
+
+async function loadEquity(){
+  if(equityLoaded) return;
+  try{ const t=await fetch(`${CSVPUB(EQ_GUIA.pub)}&gid=${EQ_GUIA.gid}&t=${Date.now()}`).then(r=>r.text()); dataEquity=parseGuiaEquity(t); }catch(e){ dataEquity=[]; }
+  await Promise.all(EQ_CARTERAS.map(async cfg=>{
+    try{ const t=await fetch(`${CSVPUB(cfg.pub)}&gid=${cfg.gid}&t=${Date.now()}`).then(r=>r.text()); dataCarteras[cfg.key]=parseCartera(t); }
+    catch(e){ dataCarteras[cfg.key]={meta:{},holdings:[]}; }
+  }));
+  if(EQ_METRICS.pub){ try{ const t=await fetch(`${CSVPUB(EQ_METRICS.pub)}&gid=${EQ_METRICS.gid}&t=${Date.now()}`).then(r=>r.text()); equityMetrics=parseEquityMetrics(t); }catch(e){} }
+  equityLoaded=true;
+}
+
 function parseSalud(txt){
   const rows = parseCSVRows(txt);
   const data = [];
@@ -2670,6 +2840,124 @@ function caucionGo(){
   document.getElementById('cauProj').innerHTML=`<table class="cau-tbl"><thead><tr><th>Plazo</th><th style="text-align:right">Rend. directo</th><th style="text-align:right">Interés neto</th><th style="text-align:right">Vas a obtener</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
+// ─── EQUITY: vistas ───
+const EQ_PF_ICON = {Conservador:'🛡', Moderado:'⚖', Agresivo:'🚀'};
+const EQ_ACC_COL = {Comprar:'var(--green)', Mantener:'var(--yellow)', Vender:'var(--red)'};
+let eqFilter = { perfil:'Todos', grupo:'Todos', accion:'Todos' };
+function eqPct(v, signed){ if(v==null||isNaN(v)) return '—'; const s=(signed&&v>0?'+':'')+v.toFixed(1).replace('.',','); return s+'%'; }
+function eqNum(v,d){ if(v==null||isNaN(v)) return '—'; return v.toFixed(d==null?2:d).replace('.',','); }
+function eqColPos(v){ return v==null||isNaN(v)?'var(--muted)':(v>=0?'var(--green)':'var(--red)'); }
+function eqAccBadge(a){ return `<span class="eq-acc" style="background:${EQ_ACC_COL[a]||'var(--muted)'}">${a}</span>`; }
+function eqHasMetrics(){ return Object.keys(equityMetrics).length>0; }
+
+function eqSetFilter(type,val){ eqFilter[type]=val; renderEqRec(); }
+function renderEqRec(){
+  const el=document.getElementById('viewEqRec'); if(!el) return;
+  if(!equityLoaded){ el.innerHTML='<div class="state"><div class="state-spinner"></div>Cargando guía de recomendaciones…</div>'; return; }
+  if(!dataEquity.length){ el.innerHTML='<div class="state">No se pudo cargar la guía de equity.</div>'; return; }
+  const mkBtns=(type,vals)=>vals.map(v=>`<button class="eq-fbtn${eqFilter[type]===v?' on':''}" onclick="eqSetFilter('${type}','${v}')">${v}</button>`).join('');
+  const metaNote = eqHasMetrics()? '' : `<div class="eq-note">📊 Las columnas de technicals/fundamentals aparecen al publicar la hoja de métricas. Mientras tanto se muestran en "—".</div>`;
+  el.innerHTML=`<div class="eq-wrap">
+    <div class="eq-title">📋 Equity recomendado <span class="eq-sub">· guía Inversiones Andinas</span></div>
+    <div class="eq-filters">
+      <div class="eq-fg"><span>Perfil</span>${mkBtns('perfil',['Todos','Conservador','Moderado','Agresivo'])}</div>
+      <div class="eq-fg"><span>Tipo</span>${mkBtns('grupo',['Todos','CEDEAR','Acción Arg'])}</div>
+      <div class="eq-fg"><span>Acción</span>${mkBtns('accion',['Todos','Comprar','Mantener','Vender'])}</div>
+    </div>
+    ${metaNote}
+    <div class="tbl-wrap"><table class="eq-tbl" id="eqRecTbl"></table></div>
+    <div class="eq-foot">🟢 Comprar · 🟡 Mantener · 🔴 Vender. Recomendaciones de la guía de Inversiones Andinas; métricas orientativas. No constituye recomendación personalizada de inversión.</div>
+  </div>`;
+  eqApplyRec();
+}
+function eqApplyRec(){
+  const tbl=document.getElementById('eqRecTbl'); if(!tbl) return;
+  let list=dataEquity.slice();
+  if(eqFilter.grupo!=='Todos') list=list.filter(p=>p.grupo===eqFilter.grupo);
+  if(eqFilter.perfil!=='Todos') list=list.filter(p=>p.acciones[eqFilter.perfil]);
+  if(eqFilter.accion!=='Todos') list=list.filter(p=>Object.values(p.acciones).includes(eqFilter.accion) && (eqFilter.perfil==='Todos'|| p.acciones[eqFilter.perfil]===eqFilter.accion));
+  const hm=eqHasMetrics();
+  const accCell=p=>{
+    if(eqFilter.perfil!=='Todos') return eqAccBadge(p.acciones[eqFilter.perfil]);
+    return EQ_PERFILES.filter(pf=>p.acciones[pf]).map(pf=>`<span class="eq-pf" title="${pf}: ${p.acciones[pf]}" style="border-color:${EQ_ACC_COL[p.acciones[pf]]};color:${EQ_ACC_COL[p.acciones[pf]]}">${EQ_PF_ICON[pf]}</span>`).join('');
+  };
+  const head=`<thead><tr>
+    <th style="text-align:left">Ticker</th><th style="text-align:left">Nombre</th><th>Tipo</th><th>Acción</th>
+    <th style="text-align:right">Precio</th><th style="text-align:right">Día</th>
+    <th style="text-align:right" title="Precio vs media móvil 200">vs SMA200</th>
+    <th title="Posición en rango 52 semanas">Rango 52s</th>
+    <th style="text-align:right">1 mes</th>
+    <th style="text-align:right">P/E</th><th style="text-align:right">EV/EBITDA</th><th style="text-align:right">ROE</th>
+  </tr></thead>`;
+  const rows=list.map(p=>{
+    const m=equityMetrics[p.ticker]||{};
+    const isETF=(m.tipo||'').toUpperCase()==='ETF';
+    const rango = (m.posRango==null||isNaN(m.posRango)) ? '<span style="color:var(--muted)">—</span>'
+      : `<div class="eq-bar"><div class="eq-bar-fill" style="width:${Math.max(2,Math.min(100,m.posRango))}%"></div><span>${Math.round(m.posRango)}</span></div>`;
+    const fund = v => (isETF? '<span style="color:var(--muted)">—</span>' : (v==null?'—':eqNum(v)));
+    return `<tr>
+      <td style="text-align:left"><b class="eq-tk">${p.ticker}</b></td>
+      <td style="text-align:left" class="eq-nm">${p.nombre||''}</td>
+      <td style="text-align:center"><span class="eq-grp">${p.grupo}</span></td>
+      <td style="text-align:center">${accCell(p)}</td>
+      <td style="text-align:right">${m.precio!=null?eqNum(m.precio):'—'}</td>
+      <td style="text-align:right;color:${eqColPos(m.varDia)}">${eqPct(m.varDia,true)}</td>
+      <td style="text-align:right;color:${eqColPos(m.vsSMA200)};font-weight:600">${eqPct(m.vsSMA200,true)}</td>
+      <td>${rango}</td>
+      <td style="text-align:right;color:${eqColPos(m.var1m)}">${eqPct(m.var1m,true)}</td>
+      <td style="text-align:right">${m.pe!=null?eqNum(m.pe):'—'}</td>
+      <td style="text-align:right">${fund(m.evEbitda)}</td>
+      <td style="text-align:right">${m.roe!=null&&!isETF?eqPct(m.roe):'<span style="color:var(--muted)">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  tbl.innerHTML=head+`<tbody>${rows||'<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Sin papeles para este filtro.</td></tr>'}</tbody>`;
+  if(!hm) tbl.classList.add('eq-nometrics');
+}
+
+let eqCartSel = 'conser';
+function eqSelCart(k){ eqCartSel=k; eqRenderCartDetail(); document.querySelectorAll('#viewEqCart .eq-cpill').forEach(b=>b.classList.toggle('on', b.dataset.k===k)); }
+function renderEqCart(){
+  const el=document.getElementById('viewEqCart'); if(!el) return;
+  if(!equityLoaded){ el.innerHTML='<div class="state"><div class="state-spinner"></div>Cargando carteras…</div>'; return; }
+  const pills=EQ_CARTERAS.map(c=>`<button class="eq-cpill${c.key===eqCartSel?' on':''}" data-k="${c.key}" onclick="eqSelCart('${c.key}')">${c.nombre}</button>`).join('');
+  el.innerHTML=`<div class="eq-wrap">
+    <div class="eq-title">💼 Carteras sugeridas <span class="eq-sub">· por perfil y etapa</span></div>
+    <div class="eq-cpills">${pills}</div>
+    <div id="eqCartDetail"></div>
+    <div class="eq-foot">Las carteras son tentativas. Recomendamos contactarnos para definir la estrategia que mejor se adapte a tu perfil.</div>
+  </div>`;
+  eqRenderCartDetail();
+}
+function eqRenderCartDetail(){
+  const box=document.getElementById('eqCartDetail'); if(!box) return;
+  const cfg=EQ_CARTERAS.find(c=>c.key===eqCartSel);
+  const data=dataCarteras[eqCartSel]||{meta:{},holdings:[]};
+  const m=data.meta||{};
+  // agrupar holdings por clase
+  const groups={}; data.holdings.forEach(h=>{ const k=h.clase||'Otros'; (groups[k]=groups[k]||[]).push(h); });
+  const grpHTML=Object.keys(groups).map(g=>{
+    const rows=groups[g].map(h=>`<tr>
+      <td class="eq-tk">${h.ticker}</td><td class="eq-nm">${h.activo}</td>
+      <td style="text-align:right"><div class="eq-wbar"><div class="eq-wbar-fill" style="width:${Math.min(100,parseFloat(h.pct)||0)}%"></div></div><span class="eq-pct">${h.pct||''}</span></td>
+      <td style="text-align:right;color:var(--text2)">${h.tir||''}</td>
+    </tr>`).join('');
+    return `<div class="eq-cgrp">${g}</div><table class="eq-tbl eq-ctbl"><thead><tr><th style="text-align:left">Ticker</th><th style="text-align:left">Activo</th><th style="text-align:right">Peso</th><th style="text-align:right">TIR</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+  box.innerHTML=`<div class="eq-card">
+    <div class="eq-cardhead">
+      <div><div class="eq-cardtitle">${m.titulo||cfg.nombre}</div><span class="eq-cardperfil">${cfg.perfil}</span></div>
+      <div class="eq-cardmonto">${m.montoUSD?`<span>${m.montoUSD}</span>`:''}${m.montoARS?`<span>${m.montoARS}</span>`:''}</div>
+    </div>
+    <div class="eq-cardmeta">
+      ${m.objetivo?`<div><b>Objetivo:</b> ${m.objetivo}</div>`:''}
+      ${m.horizonte?`<div><b>Horizonte:</b> ${m.horizonte}</div>`:''}
+      ${m.liquidez?`<div><b>Liquidez:</b> ${m.liquidez}</div>`:''}
+    </div>
+    ${m.descripcion?`<div class="eq-carddesc">${m.descripcion}</div>`:''}
+    ${grpHTML||'<div class="eq-note">Sin composición disponible.</div>'}
+  </div>`;
+}
+
 async function fetchBondSchedule(tickerUSD){
   // Bono soberano (cronograma con layout propio)
   if(GID_MAP_BONOS[tickerUSD]!==undefined){
@@ -2701,6 +2989,7 @@ async function computeConsolidado(){
   const tickers=Object.keys(simItems);
   const results=await Promise.all(tickers.map(async t=>{ const d=findInstrument(t); return {ticker:t, nominal:simItems[t], rows: d? await tFetch(d) : []}; }));
   const byDate={};   // 'yyyy-mm-dd' -> {date, interes, amort, flujo}
+  const pagos=[];    // detalle por pago: {date, ticker, interes, amort, flujo}
   let invInicial=0, totalCobrar=0; const errores=[];
   results.forEach(({ticker, nominal, rows})=>{
     if(!rows.length){ errores.push(ticker); return; }
@@ -2709,16 +2998,18 @@ async function computeConsolidado(){
       if(!row.flujo) return;   // saltar cupones pasados/zero (Cshf=0): el flujo forward = compra + cobros futuros
       const key=row.date.toISOString().slice(0,10);
       if(!byDate[key]) byDate[key]={date:row.date, interes:0, amort:0, flujo:0};
-      const fl=(row.flujo||0)*f;
-      byDate[key].interes += (row.interes||0)*f;
-      byDate[key].amort   += (row.principal||0)*f;
+      const fl=(row.flujo||0)*f, intr=(row.interes||0)*f, amrt=(row.principal||0)*f;
+      byDate[key].interes += intr;
+      byDate[key].amort   += amrt;
       byDate[key].flujo   += fl;
       if(fl<0) invInicial+=fl; else totalCobrar+=fl;
+      pagos.push({date:row.date, ticker, interes:intr, amort:amrt, flujo:fl});
     });
   });
   const dates=Object.values(byDate).sort((a,b)=>a.date-b.date);
   let acc=0; dates.forEach(d=>{ acc+=d.flujo; d.acc=acc; });
-  return { dates, invInicial, totalCobrar, neto:invInicial+totalCobrar, errores, count:tickers.length };
+  pagos.sort((a,b)=> (a.date-b.date) || (a.flujo-b.flujo) || a.ticker.localeCompare(b.ticker));
+  return { dates, pagos, invInicial, totalCobrar, neto:invInicial+totalCobrar, errores, count:tickers.length };
 }
 
 // ── Render del Simulador ──
@@ -2770,7 +3061,7 @@ async function computeAndRenderSim(){
   if(!Object.keys(simItems).length){ cont.innerHTML=''; return; }
   cont.innerHTML='<div class="flujo-loading"><div class="flujo-spinner"></div>Calculando flujo consolidado…</div>';
   const res=await computeConsolidado();
-  lastSimData={ dates:res.dates, invInicial:res.invInicial, totalCobrar:res.totalCobrar, neto:res.neto, items:{...simItems} };
+  lastSimData={ dates:res.dates, pagos:res.pagos, invInicial:res.invInicial, totalCobrar:res.totalCobrar, neto:res.neto, items:{...simItems} };
   let h='<div class="cartera-summary" style="margin:16px 0 14px">';
   h+=`<div class="cs-box"><div class="cs-label">Instrumentos</div><div class="cs-value">${res.count}</div></div>`;
   h+=`<div class="cs-box"><div class="cs-label">Inversión inicial</div><div class="cs-value red">${fmtUSD(res.invInicial)}</div></div>`;
@@ -2945,7 +3236,7 @@ async function exportCoberturaPDF(){
 
 async function exportSimPDF(){
   if(!lastSimData||!lastSimData.dates.length){ alert('No hay flujo para exportar.'); return; }
-  const {dates, invInicial, totalCobrar, neto, items}=lastSimData;
+  const {dates, pagos, invInicial, totalCobrar, neto, items}=lastSimData;
   try {
     if(!(window.jspdf&&window.jspdf.jsPDF)) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
     const { jsPDF }=window.jspdf;
@@ -2991,17 +3282,20 @@ async function exportSimPDF(){
     sums.forEach((s,i)=>{ doc.setFillColor.apply(doc,LIGHT); doc.roundedRect(bx[i],y,bw,40,4,4,'F');
       doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor.apply(doc,GREY); doc.text(s[0],bx[i]+8,y+15);
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor.apply(doc,s[2]); doc.text(s[1],bx[i]+8,y+31); });
-    // Tabla de flujo
-    const body=dates.map(d=>{ const ra=(d.interes||0)+(d.amort||0); return [simDateAR(d.date), fmtNum(d.interes||0), fmtNum(d.amort||0), fmtNum(ra), fmtNum(d.flujo)]; });
-    const tR=dates.reduce((a,d)=>a+(d.interes||0),0), tA=dates.reduce((a,d)=>a+(d.amort||0),0), tF=dates.reduce((a,d)=>a+d.flujo,0);
-    body.push(['TOTAL', fmtNum(tR), fmtNum(tA), fmtNum(tR+tA), fmtNum(tF)]);
-    doc.autoTable({ startY:y+54, head:[['Fecha','Renta','Amortización','Renta + Amort.','Flujo Neto']], body,
-      styles:{fontSize:8, halign:'right', cellPadding:4}, columnStyles:{0:{halign:'left'}},
+    // Tabla de flujo — detalle por pago, con el ticker de cada línea
+    const det = (pagos&&pagos.length) ? pagos : dates.map(d=>({date:d.date, ticker:'—', interes:d.interes, amort:d.amort, flujo:d.flujo}));
+    let prevKey=''; const body=det.map(p=>{ const ra=(p.interes||0)+(p.amort||0);
+      const key=p.date.toISOString().slice(0,10); const fecha = key===prevKey?'':simDateAR(p.date); prevKey=key;
+      return [fecha, p.ticker, fmtNum(p.interes||0), fmtNum(p.amort||0), fmtNum(ra), fmtNum(p.flujo)]; });
+    const tR=det.reduce((a,p)=>a+(p.interes||0),0), tA=det.reduce((a,p)=>a+(p.amort||0),0), tF=det.reduce((a,p)=>a+p.flujo,0);
+    body.push(['TOTAL','', fmtNum(tR), fmtNum(tA), fmtNum(tR+tA), fmtNum(tF)]);
+    doc.autoTable({ startY:y+54, head:[['Fecha','Ticker','Renta','Amortización','Renta + Amort.','Flujo Neto']], body,
+      styles:{fontSize:8, halign:'right', cellPadding:4}, columnStyles:{0:{halign:'left'},1:{halign:'left',fontStyle:'bold',textColor:BLUE}},
       headStyles:{fillColor:NAVY, textColor:255, fontStyle:'bold'}, alternateRowStyles:{fillColor:LIGHT},
       margin:{top:82,left:40,right:40},
       didParseCell:(dt)=>{ if(dt.section!=='body') return; const last=dt.row.index===body.length-1;
         if(last) dt.cell.styles.fontStyle='bold';
-        if(dt.column.index===4){ const neg=String(dt.cell.raw).trim().charAt(0)==='-'; dt.cell.styles.textColor=neg?RED:GREEN; dt.cell.styles.fontStyle='bold'; } },
+        if(dt.column.index===5){ const neg=String(dt.cell.raw).trim().charAt(0)==='-'; dt.cell.styles.textColor=neg?RED:GREEN; dt.cell.styles.fontStyle='bold'; } },
       didDrawPage:brand });
     doc.save('Flujo_de_fondos_IA.pdf');
   } catch(e){ alert('No se pudo generar el PDF: '+e.message); }
