@@ -635,7 +635,18 @@ select.calc-in { cursor:pointer; }
 .eq-wbar-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--ia-green)); }
 .eq-pct { font-family:'DM Mono',monospace; font-size:11px; color:var(--text); }
 .eq-foot { font-size:10px; color:var(--muted); line-height:1.5; margin-top:16px; }
-@media(max-width:640px){ .eq-nm{max-width:110px} .eq-tbl{font-size:11px} }
+.eq-vtoggle { display:flex; gap:6px; margin:12px 0 14px; }
+.eq-vbtn { font-family:'Poppins',sans-serif; font-size:11px; padding:5px 12px; border-radius:7px; border:1px solid var(--border); background:var(--surface2); color:var(--text2); cursor:pointer; }
+.eq-vbtn.on { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+.eq-pie-wrap { display:flex; gap:24px; align-items:center; flex-wrap:wrap; padding:6px 0; }
+.eq-pie { width:220px; height:220px; flex-shrink:0; }
+.eq-legend { display:grid; grid-template-columns:1fr 1fr; gap:5px 18px; flex:1; min-width:240px; }
+.eq-leg { display:flex; align-items:center; gap:7px; font-size:11px; color:var(--text2); }
+.eq-leg .eq-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.eq-leg b { font-family:'Roboto Mono',monospace; color:var(--text); }
+.eq-leg span { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.eq-leg em { margin-left:auto; font-style:normal; font-family:'DM Mono',monospace; color:var(--text); }
+@media(max-width:640px){ .eq-nm{max-width:110px} .eq-tbl{font-size:11px} .eq-legend{grid-template-columns:1fr} }
 
 /* ── PRINT / PDF ── */
 @media print {
@@ -2915,7 +2926,27 @@ function eqApplyRec(){
 }
 
 let eqCartSel = 'conser';
+let eqCartView = 'tabla';
 function eqSelCart(k){ eqCartSel=k; eqRenderCartDetail(); document.querySelectorAll('#viewEqCart .eq-cpill').forEach(b=>b.classList.toggle('on', b.dataset.k===k)); }
+function eqSetCartView(v){ eqCartView=v; eqRenderCartDetail(); }
+const EQ_PIE_COL=['#2465f6','#21e2ab','#e9cb30','#e9663a','#7c5cff','#18b488','#5386f8','#e93030','#a78bfa','#34d399','#f59e0b','#38bdf8','#fb7185','#84a9fa','#f472b6','#22d3ee'];
+function eqPieHTML(holdings){
+  const items=holdings.map(h=>({label:h.ticker, activo:h.activo, clase:h.clase, v:parseFloat(String(h.pct||'').replace('%','').replace(',','.'))||0})).filter(x=>x.v>0);
+  const total=items.reduce((a,x)=>a+x.v,0);
+  if(!total) return '<div class="eq-note">Sin pesos para graficar.</div>';
+  const cx=110,cy=110,r=100,ri=60; let ang=-Math.PI/2; let paths='';
+  items.forEach((x,i)=>{ const a2=ang + x.v/total*2*Math.PI;
+    const x1=cx+r*Math.cos(ang), y1=cy+r*Math.sin(ang), x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    const large=(a2-ang)>Math.PI?1:0;
+    paths+=`<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${EQ_PIE_COL[i%EQ_PIE_COL.length]}" stroke="var(--bg)" stroke-width="1.5"><title>${x.label} · ${x.v.toFixed(1).replace('.',',')}%</title></path>`;
+    ang=a2;
+  });
+  paths+=`<circle cx="${cx}" cy="${cy}" r="${ri}" fill="var(--surface)"/>`;
+  paths+=`<text x="${cx}" y="${cy-3}" text-anchor="middle" font-size="10" fill="var(--muted)">Total</text>`;
+  paths+=`<text x="${cx}" y="${cy+15}" text-anchor="middle" font-size="16" font-weight="700" fill="var(--text)">${Math.round(total)}%</text>`;
+  const legend=items.map((x,i)=>`<div class="eq-leg"><span class="eq-dot" style="background:${EQ_PIE_COL[i%EQ_PIE_COL.length]}"></span><b>${x.label}</b><span>${x.activo||''}</span><em>${x.v.toFixed(1).replace('.',',')}%</em></div>`).join('');
+  return `<div class="eq-pie-wrap"><svg viewBox="0 0 220 220" class="eq-pie">${paths}</svg><div class="eq-legend">${legend}</div></div>`;
+}
 function renderEqCart(){
   const el=document.getElementById('viewEqCart'); if(!el) return;
   if(!equityLoaded){ el.innerHTML='<div class="state"><div class="state-spinner"></div>Cargando carteras…</div>'; return; }
@@ -2954,7 +2985,11 @@ function eqRenderCartDetail(){
       ${m.liquidez?`<div><b>Liquidez:</b> ${m.liquidez}</div>`:''}
     </div>
     ${m.descripcion?`<div class="eq-carddesc">${m.descripcion}</div>`:''}
-    ${grpHTML||'<div class="eq-note">Sin composición disponible.</div>'}
+    <div class="eq-vtoggle">
+      <button class="eq-vbtn${eqCartView==='tabla'?' on':''}" onclick="eqSetCartView('tabla')">📋 Tabla</button>
+      <button class="eq-vbtn${eqCartView==='torta'?' on':''}" onclick="eqSetCartView('torta')">🥧 Torta</button>
+    </div>
+    ${ data.holdings.length ? (eqCartView==='torta' ? eqPieHTML(data.holdings) : grpHTML) : '<div class="eq-note">Sin composición disponible.</div>' }
   </div>`;
 }
 
