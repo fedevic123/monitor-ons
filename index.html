@@ -1049,7 +1049,7 @@ const BASE_CSV = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PUB}/pub?s
 const GID_MAP = {
   'Monitor':1949057561,'ARC1':1775106156,'CAC5':2055115109,'CP32':1775014491,
   'CS38':1972072080,'CS44':1362466536,'DNC3':572103540,'DNC5':215044844,
-  'DNC7':1137927666,'GNCX':2037160330,'IRCF':946102496,'IRCL':1952734760,
+  'DNC7':1137927666,'DNCA':888371641,'GNCX':2037160330,'IRCF':946102496,'IRCL':1952734760,
   'IRCO':199288823,'IRCP':1403616061,'LECG':1945455296,'LMS7':746860700,
   'LMS8':1936830797,'LOC2':1073989753,'LOC5':968817089,'LOC6':842143395,
   'MGC9':1626021529,'MGCM':238884165,'MGCO':985052968,'MGCR':1716708544,
@@ -3543,12 +3543,38 @@ function drawAgenda(){
   el.innerHTML=h;
 }
 
+// ─── Deep-link desde la Propuesta de Cartera (precarga el simulador) ──────────
+// URL: ?simdolar=AE38D:10000,VSCXD:5000&simpesos=S30J6:100000&go=dolar
+function simFromURL(){
+  try{
+    var p = new URLSearchParams(location.search);
+    var sd = p.get('simdolar'), sp = p.get('simpesos');
+    if(sd===null && sp===null) return;
+    var go = p.get('go') || (sd!==null ? 'dolar' : 'pesos');
+    function parseItems(s){ var o={}; (s||'').split(',').forEach(function(x){ var kv=x.split(':'); var tk=(kv[0]||'').trim().toUpperCase(); var n=parseFloat(kv[1]); if(tk && !isNaN(n) && n>0) o[tk]=n; }); return o; }
+    function setStore(store, items){ Object.keys(store).forEach(function(k){ delete store[k]; }); Object.assign(store, items); }
+    if(sd!==null) setStore(simStore.dolar, parseItems(sd));
+    if(sp!==null) setStore(simStore.pesos, parseItems(sp));
+    try{ localStorage.setItem('ia_sim_dolar', JSON.stringify(simStore.dolar)); localStorage.setItem('ia_sim_pesos', JSON.stringify(simStore.pesos)); }catch(e){}
+    function ready(u){ return u==='pesos' ? ((dataTasaFija&&dataTasaFija.length)||(dataCER&&dataCER.length)) : ((dataBonos&&dataBonos.length)||(dataONs&&dataONs.length)); }
+    var t0=Date.now();
+    var iv=setInterval(function(){
+      if(ready(go) || Date.now()-t0>15000){
+        clearInterval(iv);
+        setUniverse(go);
+        setSection('sim');
+      }
+    }, 250);
+  }catch(e){}
+}
+
 // ─── INIT ─────────────────────────────────────────────────
 loadMonitor();
 loadBonos();
 loadSalud();
 loadTasaFija();
 loadCER();
+simFromURL();
 setInterval(loadMonitor, 5*60*1000);
 setInterval(loadBonos, 5*60*1000);
 setInterval(loadSalud, 10*60*1000);
