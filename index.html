@@ -1049,7 +1049,7 @@ const BASE_CSV = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID_PUB}/pub?s
 const GID_MAP = {
   'Monitor':1949057561,'ARC1':1775106156,'CAC5':2055115109,'CP32':1775014491,
   'CS38':1972072080,'CS44':1362466536,'DNC3':572103540,'DNC5':215044844,
-  'DNC7':1137927666,'DNCA':888371641,'GNCX':2037160330,'IRCF':946102496,'IRCL':1952734760,
+  'DNC7':1137927666,'DNCA':888371641,'EAC4':854028698,'GNCX':2037160330,'IRCF':946102496,'IRCL':1952734760,
   'IRCO':199288823,'IRCP':1403616061,'LECG':1945455296,'LMS7':746860700,
   'LMS8':1936830797,'LOC2':1073989753,'LOC5':968817089,'LOC6':842143395,
   'MGC9':1626021529,'MGCM':238884165,'MGCO':985052968,'MGCR':1716708544,
@@ -2218,7 +2218,7 @@ async function renderCartera() {
   const need = new Set();
   (currentUniverse==='pesos' ? UNIV : dataBonos).forEach(d => need.add(d));
   selectedONs.forEach(d => need.add(d));
-  await Promise.all([...need].map(async d => { schedMap[d.tickerUSD] = await tFetch(d); }));
+  await mapPool([...need], 6, async d => { schedMap[d.tickerUSD] = await tFetch(d); });
 
   const TODAY = new Date(); TODAY.setHours(0,0,0,0);
   const ONE_YEAR = new Date(TODAY.getFullYear()+1, TODAY.getMonth(), TODAY.getDate());
@@ -2703,11 +2703,11 @@ async function fetchPesosSchedule(d){
   if(d.clase==='cer'){
     const gid=GID_MAP_CER[d.tickerUSD]; if(gid===undefined) return [];   // cero-cupón sin pestaña → fuera del BETA
     const ck='CER_'+d.tickerUSD; if(flujoCache[ck]) return flujoCache[ck];
-    try {
-      const r=await fetch(`${BASE_CSV_CER}&gid=${gid}&t=${Date.now()}`);
-      const rows=parseCERSchedule(await r.text()).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
-      flujoCache[ck]=rows; return rows;
-    } catch(e){ return []; }
+    const txt=await fetchCSV(`${BASE_CSV_CER}&gid=${gid}&t=${Date.now()}`);
+    if(txt===null) return [];
+    const rows=parseCERSchedule(txt).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
+    if(rows.length) flujoCache[ck]=rows;
+    return rows;
   }
   return [];
 }
@@ -3056,30 +3056,48 @@ async function renderEqNews(){
     </a>`).join('')}</div>`;
 }
 
+// Fetch CSV con reintentos: chequea r.ok y que el body sea CSV (no la página de redirect/HTML
+// que devuelve Google cuando rate-limitea). Devuelve null si falla tras los reintentos.
+async function fetchCSV(url, tries){
+  tries = tries || 3;
+  for(let i=0;i<tries;i++){
+    try {
+      const r=await fetch(url);
+      if(r.ok){ const t=await r.text(); if(t && t.length>20 && !/^\s*<(!doctype|html)/i.test(t)) return t; }
+    } catch(e){}
+    if(i<tries-1) await new Promise(res=>setTimeout(res, 350*(i+1)));
+  }
+  return null;
+}
+
+// Ejecuta fn sobre items con concurrencia máxima n (evita ráfagas que rate-limitean a Google).
+async function mapPool(items, n, fn){
+  const arr=[...items], out=new Array(arr.length); let i=0;
+  const worker=async()=>{ while(i<arr.length){ const k=i++; out[k]=await fn(arr[k], k); } };
+  await Promise.all(Array.from({length:Math.min(n, arr.length||1)}, worker));
+  return out;
+}
+
 async function fetchBondSchedule(tickerUSD){
   // Bono soberano (cronograma con layout propio)
   if(GID_MAP_BONOS[tickerUSD]!==undefined){
     const ck='B_'+tickerUSD;
     if(flujoCache[ck]) return flujoCache[ck];
-    try {
-      const r=await fetch(`${BASE_CSV_BONOS}&gid=${GID_MAP_BONOS[tickerUSD]}&t=${Date.now()}`);
-      const txt=await r.text();
-      const rows=parseBonoSchedule(txt).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
-      flujoCache[ck]=rows;
-      return rows;
-    } catch(e){ return []; }
+    const txt=await fetchCSV(`${BASE_CSV_BONOS}&gid=${GID_MAP_BONOS[tickerUSD]}&t=${Date.now()}`);
+    if(txt===null) return [];   // falla de red/rate-limit → NO cachear, reintentable
+    const rows=parseBonoSchedule(txt).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
+    if(rows.length) flujoCache[ck]=rows;   // sólo cachear resultados válidos
+    return rows;
   }
   // ON (cronograma estándar)
   const tab=tickerToTab(tickerUSD);
   if(!tab || GID_MAP[tab]===undefined) return [];
   if(flujoCache[tab]) return flujoCache[tab];
-  try {
-    const r=await fetch(`${BASE_CSV}&gid=${GID_MAP[tab]}&t=${Date.now()}`);
-    const txt=await r.text();
-    const rows=parseFlujoRows(txt).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
-    flujoCache[tab]=rows;
-    return rows;
-  } catch(e){ return []; }
+  const txt=await fetchCSV(`${BASE_CSV}&gid=${GID_MAP[tab]}&t=${Date.now()}`);
+  if(txt===null) return [];
+  const rows=parseFlujoRows(txt).map(row=>({...row, date:parseFlujoDate(row.fecha)})).filter(row=>row.date);
+  if(rows.length) flujoCache[tab]=rows;
+  return rows;
 }
 
 // Consolida el flujo de fondos de todos los instrumentos cargados (escala por nominal/100).
@@ -3501,11 +3519,11 @@ async function renderAgenda(){
   agendaBuilding = true; agendaMap = agendaMap || {}; drawAgenda();
   const insts = tInsts(); const today = new Date(); today.setHours(0,0,0,0);
   let done = 0;
-  await Promise.all(insts.map(async d => {
+  await mapPool(insts, 6, async d => {
     let rows=[]; try { rows = await tFetch(d); } catch(e){}
     rows.forEach(r => { if (r.flujo>0 && r.date>=today){ const k=r.date.toISOString().slice(0,10); (agendaMap[k]=agendaMap[k]||[]).push({tk:d.tickerUSD, clase:d.clase, flujo:r.flujo, renta:r.interes, amort:r.principal, nombre:d.nombre}); } });
     if(++done % 8 === 0) drawAgenda();
-  }));
+  });
   agendaLoaded = true; agendaBuilding = false; drawAgenda();
 }
 function agendaNav(delta){ if(!agendaRef) agendaRef=new Date(); agendaRef=new Date(agendaRef.getFullYear(), agendaRef.getMonth()+delta, 1); drawAgenda(); }
