@@ -3187,7 +3187,7 @@ async function computeAndRenderSim(){
   if(res.errores.length) h+=`<div style="font-size:11px;color:var(--gold2);margin-bottom:10px">⚠ Sin cronograma disponible para: ${res.errores.join(', ')} (omitidos del consolidado)</div>`;
   if(res.dates.length) h+='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px"><button onclick="exportSimPDF()" class="sim-export-btn">⬇ PDF</button><button onclick="exportSimCSV()" class="sim-export-btn">⬇ CSV</button></div>';
   h+=simChartHTML(res.dates);
-  h+=simTableHTML(res.dates);
+  h+=simTableHTML(res.pagos);
   cont.innerHTML=h;
 }
 
@@ -3437,22 +3437,24 @@ function simChartHTML(dates){
   return `<div class="sim-chart-wrap"><div class="cal-title" style="margin-bottom:10px">Cobros por mes · renta + amortización (${currentUniverse==='pesos'?'ARS':'USD'})</div><div class="sim-chart">${bars}</div></div>`;
 }
 
-function simTableHTML(dates){
-  if(!dates.length) return '<div style="color:var(--muted);font-size:12px">Sin pagos en el cronograma.</div>';
+function simTableHTML(pagos){
+  if(!pagos||!pagos.length) return '<div style="color:var(--muted);font-size:12px">Sin pagos en el cronograma.</div>';
   let h='<div class="cal-title" style="margin:6px 0 8px">Detalle por fecha ('+(currentUniverse==='pesos'?'ARS':'USD')+')</div>';
-  h+='<div class="flujo-tbl-wrap"><table class="flujo-tbl"><thead><tr><th style="text-align:left">Fecha</th><th>Renta</th><th>Amortización</th><th>Renta + Amortización</th><th>Flujo Neto</th></tr></thead><tbody>';
+  h+='<div class="flujo-tbl-wrap"><table class="flujo-tbl"><thead><tr><th style="text-align:left">Fecha</th><th style="text-align:left">Activo</th><th>Renta</th><th>Amortización</th><th>Renta + Amortización</th><th>Flujo Neto</th></tr></thead><tbody>';
   const today=new Date(); today.setHours(0,0,0,0);
-  let tR=0,tA=0,tF=0;
-  dates.forEach(d=>{
-    const past=d.date<today; const fl=d.flujo; const ra=(d.interes||0)+(d.amort||0);
-    tR+=d.interes||0; tA+=d.amort||0; tF+=fl;
-    const dstr=d.date.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  let tR=0,tA=0,tF=0, prevKey='';
+  pagos.forEach(p=>{
+    const past=p.date<today; const fl=p.flujo; const ra=(p.interes||0)+(p.amort||0);
+    tR+=p.interes||0; tA+=p.amort||0; tF+=fl;
+    const key=p.date.toISOString().slice(0,10);
+    const dstr = key===prevKey ? '' : p.date.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}); prevKey=key;
     h+=`<tr style="${past?'opacity:.5':''}"><td style="text-align:left">${dstr}</td>`+
-       `<td>${d.interes?fmtNum(d.interes):'—'}</td><td>${d.amort?fmtNum(d.amort):'—'}</td>`+
+       `<td style="text-align:left;font-family:'Roboto Mono',monospace;color:var(--accent2)">${p.ticker}</td>`+
+       `<td>${p.interes?fmtNum(p.interes):'—'}</td><td>${p.amort?fmtNum(p.amort):'—'}</td>`+
        `<td>${ra?fmtNum(ra):'—'}</td>`+
        `<td style="color:${fl<0?'var(--red)':'var(--ia-green)'};font-weight:600">${fmtNum(fl)}</td></tr>`;
   });
-  h+=`</tbody><tfoot><tr><td style="text-align:left">TOTAL</td><td>${fmtNum(tR)}</td><td>${fmtNum(tA)}</td><td>${fmtNum(tR+tA)}</td><td style="color:${tF<0?'var(--red)':'var(--ia-green)'};font-weight:700">${fmtNum(tF)}</td></tr></tfoot>`;
+  h+=`</tbody><tfoot><tr><td style="text-align:left">TOTAL</td><td></td><td>${fmtNum(tR)}</td><td>${fmtNum(tA)}</td><td>${fmtNum(tR+tA)}</td><td style="color:${tF<0?'var(--red)':'var(--ia-green)'};font-weight:700">${fmtNum(tF)}</td></tr></tfoot>`;
   h+='</table></div>';
   return h;
 }
